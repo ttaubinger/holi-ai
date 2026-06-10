@@ -1,0 +1,62 @@
+# Android Studio & IDE
+*.iml
+.idea/assetWizardSettings.xml
+.idea/caches
+.idea/dictionaries
+.idea/gradle.xml
+.idea/libraries
+.idea/modules.xml
+.idea/navEditor.xml
+.idea/tasks.xml
+.idea/workspace.xml
+.navigation/
+captures/
+vcs.xml
+
+# Build & Output
+*.aab
+*.aar
+*.ap_
+*.apk
+*.class
+*.dex
+.cxx/
+.externalNativeBuild
+.gradle/
+bin/
+build/
+gen/
+out/
+proguard/
+
+# Capacitor & Cordova
+app/src/main/assets/capacitor.config.json
+app/src/main/assets/capacitor.plugins.json
+app/src/main/assets/public
+app/src/main/res/xml/config.xml
+capacitor-cordova-android-plugins
+
+# Configuration & Keys
+local.properties
+
+# Fastlane
+fastlane/Preview.html
+fastlane/readme.md
+fastlane/report.xml
+fastlane/screenshots
+fastlane/test_output
+
+# Freeline
+freeline/
+freeline.py
+freeline_project_description.json
+
+# Lint & Profiling
+*.hprof
+lint/generated/
+lint/intermediates/
+lint/outputs/
+lint/tmp/
+
+# Logs
+*.log

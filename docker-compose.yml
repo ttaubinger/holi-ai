@@ -1,0 +1,72 @@
+services:
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  postgres:
+    image: ankane/pgvector:latest
+    profiles:
+      - localdb
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: holi_ai
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./holi-ai-be/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  backend:
+    build: ./holi-ai-be
+    ports:
+      - "4000:4000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - PORT=4000
+      - USE_LOCAL_DB=${LOCAL_DB_ENABLED:-true}
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/holi_ai
+      - GARMIN_CLIENT_ID=${GARMIN_CLIENT_ID:-}
+      - GARMIN_CLIENT_SECRET=${GARMIN_CLIENT_SECRET:-}
+      - TRANSFORMERS_CACHE=/usr/src/app/.cache
+    volumes:
+      - transformers_cache:/usr/src/app/.cache
+    restart: on-failure
+    depends_on:
+      - redis
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    profiles:
+      - ngrok
+    ports:
+      - "4040:4040"
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN:-}
+    command: "http backend:4000"
+    depends_on:
+      - backend
+
+  frontend:
+    build:
+      context: ./holi-ai-fe
+      args:
+        - NEXT_PUBLIC_LOCAL_DB=${LOCAL_DB_ENABLED:-true}
+        - NEXT_PUBLIC_API_URL=/api
+        - NEXT_PUBLIC_GARMIN_DISABLED=${GARMIN_DISABLED:-false}
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=/api
+      - NEXT_PUBLIC_LOCAL_DB=${LOCAL_DB_ENABLED:-true}
+      - INTERNAL_BACKEND_URL=http://backend:4000
+    depends_on:
+      - backend
+
+volumes:
+  redis_data:
+  pg_data:
+  transformers_cache:

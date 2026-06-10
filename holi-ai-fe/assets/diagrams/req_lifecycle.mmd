@@ -1,0 +1,30 @@
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant API as API Fastify
+    participant Queue as Redis Queue BullMQ
+    participant Worker
+    participant LLM as LLM Groq
+    participant DB as DB Postgres pgvector
+
+    User->>Frontend: Send Message
+    Frontend->>API: POST /api/chat
+    API->>DB: Save User Message
+    API->>Queue: Enqueue Job
+    API-->>Frontend: 202 Accepted Job ID
+    Queue->>Worker: Process Job
+    Worker->>DB: Fetch Agent Context and User Facts
+    Worker->>Worker: Generate Embeddings MiniLM-L6
+    Worker->>Worker: Extract Last Assistant Message Only
+    loop Tool Calling Max 10 Iterations
+        Worker->>LLM: Send Context and Tool Definitions
+        LLM-->>Worker: Tool Call Request OR Final Response
+        opt Tool Called
+            Worker->>DB: Execute Tool fetch_biometrics
+            Worker->>Worker: Append Tool Result to Payload
+        end
+    end
+    Worker->>DB: Save Final LLM Response
+    Worker->>DB: Mark Job Complete
+    Frontend->>API: Poll /api/chat/status
+    API-->>Frontend: Final Chat Result

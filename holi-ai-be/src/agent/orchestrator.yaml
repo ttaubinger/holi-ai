@@ -1,0 +1,161 @@
+version: "1.0"
+
+routes:
+  - id: goal_gathering
+    description: "Active when the user has not yet stated their primary goal."
+    condition: "!context.hasGoal"
+    steps:
+      - id: determine_goal
+        prompt: |
+          Check if the user just stated their primary goal. If not, ask them directly what their primary goal is using the 'send_response' tool.
+          Once they state it, call ALL THREE tools in the same turn:
+          1. 'upsert_user_facts' (key='primary_goal') to save it to the DB
+          2. 'enqueue_questions' to enqueue a complete list of all essential questions needed to form a plan for this specific goal
+          3. 'send_response' to greet the user and acknowledge their goal
+          4. 'evaluate_current_question' to immediately process and ask the first question from the list you just enqueued.
+
+          CRITICAL BEHAVIOR:
+          1. INTERVIEWING: Ask at most ONE question at a time. Wait for the user to answer.
+        subsequent_turn_prompt: |
+          Evaluate tool results. Call 'send_response' to finish your turn, or call another tool if required.
+          CRITICAL RULES:
+          1. You MUST use a tool call to reply. DO NOT generate raw text or Markdown outside of a tool.
+          2. FACT PERSISTENCE: If the user shared any important structured detail (goal, number, preference, constraint), call 'upsert_user_facts' to persist it alongside 'send_response'.
+        tools:
+          allow:
+            - enqueue_questions
+            - evaluate_current_question
+            - upsert_user_facts
+            - send_response
+        hooks:
+          pre_execution:
+            - if: "(tools_injected.includes('enqueue_questions') || context.questionQueue.length > 0) && !tools_injected.includes('evaluate_current_question')"
+              inject_tool_call:
+                name: "evaluate_current_question"
+        interceptors:
+          on_tool_call:
+            - match: "tool.name === 'upsert_user_facts'"
+              execute:
+                - action: "transition_route"
+                  target: "goal_gathering"
+            - match: "tool.name === 'evaluate_current_question'"
+              execute:
+                - action: "transition_route"
+                  target: ""
+
+  - id: queue_router
+    description: "Evaluates the current question in the queue using RAG."
+    condition: "context.isQueueRouter"
+    steps:
+      - id: evaluate_front
+        prompt: |
+          You are a routing agent evaluating the CURRENT question at the front of the queue to be asked to the user.
+          Your job is to determine if the user has ALREADY answered this current question based on the retrieved facts and episodic memory.
+          If the memory or facts ANSWER the question, OR if the question is IRRELEVANT: call 'evaluate_current_question' to move on to the next question.
+          If the memory/facts do NOT answer the question and it is RELEVANT: call 'send_response' to ask the user.
+        user_message_override: |
+          Question to be asked to the user: {{pendingQuestion}}
+
+          All Known User Facts:
+          {{factsContext}}
+
+          Additional retrieved facts & memory via RAG:
+          {{retrievedFacts}}
+          {{retrievedMemory}}
+        tools:
+          allow:
+            - evaluate_current_question
+            - send_response
+        interceptors:
+          on_tool_call:
+            - match: "tool.name === 'evaluate_current_question' || tool.name === 'send_response'"
+              execute: 
+                - action: "dequeue_question"
+
+  - id: main_interview
+    description: "Active when the user has a goal, and we are proceeding with interviews."
+    condition: "context.hasGoal && !context.isQueueRouter && context.questionQueue.length > 0"
+    steps:
+      - id: execute_turn
+        prompt: |
+          The user has already stated their primary goal.
+
+          CRITICAL BEHAVIOR:
+          1. INTERVIEWING: Ask at most ONE question at a time.
+          2. FACT PERSISTENCE: When the user provides important structured information (numbers, preferences, constraints, schedules, lifestyle details), call 'upsert_user_facts' to persist it. Update existing facts if the user corrects them.
+        subsequent_turn_prompt: |
+          Evaluate tool results. Call 'send_response' to finish your turn, or call another tool if required.
+          CRITICAL RULES:
+          1. DO NOT ask questions without updating the queue.
+          2. If the user answered a question, call 'upsert_user_facts' to persist the answer, then call 'evaluate_current_question' to process the next one.
+          3. You MUST use a tool call to reply. DO NOT generate raw text or Markdown outside of a tool.
+        tools:
+          allow:
+            - fetch_action_plans
+            - fetch_action_plan_categories
+            - fetch_user_crons
+            - enqueue_questions
+            - evaluate_current_question
+            - evolve_coach_prompt
+            - upsert_user_facts
+            - send_response
+          dynamic_allow:
+            - if: "tools_called.includes('fetch_action_plan_categories')"
+              add: ['fetch_action_plan_category', 'upsert_action_plan']
+            - if: "tools_called.includes('fetch_user_crons')"
+              add: ['upsert_user_cron']
+        hooks:
+          pre_execution:
+            - if: "context.questionQueue.length > 0 && !tools_injected.includes('evaluate_current_question')"
+              inject_tool_call:
+                name: "evaluate_current_question"
+
+  - id: plan_generation
+    description: "Triggered automatically when the queue is fully emptied and we have a goal."
+    condition: "context.hasGoal && context.questionQueue.length === 0 && !context.successful_tools.includes('generate_user_plan')"
+    steps:
+      - id: generate_plan
+        force_tool_choice: required
+        prompt: |
+          Review the fetched Global Context containing all gathered user facts.
+          Evaluate if you have enough information to generate a highly detailed and personalized plan for the user's primary goal.
+
+          If YES, call 'generate_user_plan'. The user response will be sent automatically in the next step — do NOT call 'send_response' here.
+          If NO (critical information is missing), call 'enqueue_questions' AND 'send_response' in the same turn with a brief message asking the user for the missing details.
+
+          You MUST reply using a tool call only. Do NOT produce any free-form text or chat content.
+          CRITICAL: NEVER paste plan details into 'send_response'. Plans are saved to the DB automatically — keep any chat message to one short sentence.
+
+          USER FACTS (Global Context):
+          {{factsContext}}
+        tools:
+          allow:
+            - generate_user_plan
+            - enqueue_questions
+            - send_response
+        hooks:
+          pre_execution:
+            - if: "(tools_injected.includes('enqueue_questions') || context.questionQueue.length > 0) && !tools_injected.includes('evaluate_current_question')"
+              inject_tool_call:
+                name: "evaluate_current_question"
+        interceptors:
+          on_tool_call:
+            - match: "tool.name === 'generate_user_plan'"
+              execute:
+                - action: "transition_route"
+                  target: "routine_generation"
+
+  - id: routine_generation
+    description: "Triggered immediately after plan generation."
+    condition: "context.successful_tools.includes('generate_user_plan') && !context.successful_tools.includes('generate_user_routines')"
+    steps:
+      - id: generate_routines
+        force_tool_choice: required
+        prompt: |
+          You have just generated the user's plan. Call 'generate_user_routines' to create the associated routines, then call 'send_response' with a brief message such as "Your plan and routines are ready. Check the Plans tab for details."
+          CRITICAL: Do NOT include any plan or routine content in 'send_response'. Keep it to one short sentence.
+          You MUST reply using a tool call only. Do NOT produce any free-form text or chat content.
+        tools:
+          allow:
+            - generate_user_routines
+            - send_response

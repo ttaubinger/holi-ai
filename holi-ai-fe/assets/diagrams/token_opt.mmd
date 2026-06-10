@@ -1,0 +1,14 @@
+graph LR
+    A[Raw Chat History from DB] --> B{Role Filter}
+    B -->|User Messages| C[Discarded]
+    B -->|System Messages| D[Discarded]
+    B -->|Assistant Messages| E[Keep Only Last Message]
+    E --> F[Token-Optimized History Payload]
+    F --> G[LLM Context Window]
+    
+    subgraph Payload Minification
+    H[Tool JSON Response] --> I[Strip IDs and Timestamps]
+    I --> J[Compress Date Strings]
+    J --> K[Minified Tool Output]
+    K --> G
+    end
