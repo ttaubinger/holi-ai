@@ -1,0 +1,16 @@
+# Build & Output
+/.build
+DerivedData/
+
+# IDE & Editor
+/*.xcodeproj
+.swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
+xcuserdata/
+
+# Package & Dependencies
+.netrc
+.swiftpm/config/registries.json
+/Packages
+
+# System
+.DS_Store

@@ -1,0 +1,8 @@
+flowchart TD
+    A["User Action"] --> B{"SWR Cache Check"}
+    B -->|"Hit"| C["Render Instantly via localStorage"]
+    B -->|"Miss / Revalidate"| D["Fetch from Fastify API"]
+    D --> E["Update localStorage"]
+    E --> C
+    C --> F["Background Polling for AI Jobs"]
+    F --> D
