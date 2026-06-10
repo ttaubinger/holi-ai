@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">HoliAI</string>
+    <string name="title_activity_main">HoliAI</string>
+    <string name="package_name">com.holistic.aicoach</string>
+    <string name="custom_url_scheme">com.holistic.aicoach</string>
+</resources>

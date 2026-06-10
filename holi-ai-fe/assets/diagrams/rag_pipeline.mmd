@@ -1,0 +1,12 @@
+graph TD
+    A[LLM Calls update_question_queue] --> B(Worker Extracts Questions)
+    B --> C[Generate Query Embedding]
+    C -->|all-MiniLM-L6-v2| D[Vector 384-dim]
+    D --> E{Parallel Semantic Search}
+    E -->|Cosine Distance| F[(Episodic Memory)]
+    E -->|Cosine Distance| G[(User Facts)]
+    F --> H[Retrieved Memories]
+    G --> I[Retrieved Facts]
+    H --> J[Inject into LLM Context Payload]
+    I --> J
+    J --> K[Queue Router Evaluates Answer]

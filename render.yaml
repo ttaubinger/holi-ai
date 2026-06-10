@@ -1,0 +1,28 @@
+services:
+  # BullMQ Redis Database
+  - type: redis
+    name: holi-ai-redis
+    ipAllowList: [] # internal only by default
+    plan: free
+
+  # Node.js Fastify Backend
+  - type: web
+    name: holi-ai-backend
+    env: node
+    plan: free
+    buildCommand: "cd holi-ai-be && npm install --legacy-peer-deps"
+    startCommand: "cd holi-ai-be && npm start"
+    envVars:
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: holi-ai-redis
+          property: connectionString
+      - key: PORT
+        value: 4000
+      - key: SUPABASE_KEY
+        sync: false
+      - key: GARMIN_CLIENT_ID
+        sync: false
+      - key: GARMIN_CLIENT_SECRET
+        sync: false

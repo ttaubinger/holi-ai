@@ -1,0 +1,15 @@
+# Dependencies
+node_modules
+
+# Environment & System
+.env
+.env.local
+.git
+
+# IDE & Editor
+.idea
+
+# Logs & Debug
+npm-debug.log
+pnpm-debug.log
+yarn-error.log
