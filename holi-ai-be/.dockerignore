@@ -1,0 +1,8 @@
+node_modules
+.env
+.env.local
+.git
+.idea
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
