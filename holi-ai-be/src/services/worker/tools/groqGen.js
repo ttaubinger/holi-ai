@@ -347,16 +347,6 @@ const getStepsParams = () => ({
   required: ['actionable_steps']
 });
 
-const buildExtractStepsPrompt = (category) => `You are an AI planner. Read the Category Content and extract distinct, schedulable routines into a JSON object with an 'actionable_steps' array of strings.
-CRITICAL RULES:
-1. Consolidate related tasks that occur at the same time into a single comprehensive routine entry.
-2. Ensure sequential steps are logically grouped so no two entries would be scheduled within 5 minutes of each other.
-3. Each entry must represent a unique, independently schedulable action.
-4. Merge duplicate or near-duplicate entries.
-5. Return raw, valid JSON only without markdown formatting.
-Category Content:
-${category.content}`;
-
 const getSingleCronParams = () => ({
   type: 'object',
   properties: {
@@ -378,15 +368,6 @@ const validateSingleRoutine = (args) => {
   }
 };
 
-const buildSingleRoutinePrompt = (planTitle, catName, step, unitSystem) => `Create EXACTLY ONE routine for the following step.
-Plan: ${planTitle}
-Category: ${catName}
-Step: ${step}
-
-CRITICAL INSTRUCTIONS:
-1. ${getUnitInstruction(unitSystem)}
-2. Format the description using a bulleted or numbered list.`;
-
 const slugify = (s) => s ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim() : '';
 
 const getPlanArgs = async (apiKeys, userId, title) => {
@@ -398,24 +379,48 @@ const getPlanArgs = async (apiKeys, userId, title) => {
 };
 
 
-const extractCategorySteps = async (apiKeys, userId, client, model, cat, jobId) => {
+const buildExtractPlanStepsPrompt = (planArgs) => {
+  const planContent = planArgs.categories.map(c => `Category: ${c.name}\n${c.content}`).join('\n\n');
+  return `You are an AI planner. Read the entire Plan Content and extract all distinct, schedulable routines into a JSON object with an 'actionable_steps' array of strings.
+CRITICAL RULES:
+1. Consolidate related tasks that occur at the same time into a single comprehensive routine entry.
+2. Ensure sequential steps are logically grouped so no two entries would be scheduled within 5 minutes of each other.
+3. Each entry must represent a unique, independently schedulable action.
+4. Merge duplicate or near-duplicate entries across all categories.
+5. Return raw, valid JSON only without markdown formatting.
+Plan Content:
+${planContent}`;
+};
+
+const extractPlanSteps = async (apiKeys, userId, client, model, planArgs, jobId) => {
   const args = await executeWithRateLimitHandling(
     apiKeys, userId, client, model,
-    buildExtractStepsPrompt(cat),
+    buildExtractPlanStepsPrompt(planArgs),
     'extract_steps', getStepsParams(), null,
     jobId, 'routine generation', 4096
   );
   const steps = args?.actionable_steps || [];
-  if (steps.length === 0) {
-    throw new Error('No actionable steps could be extracted for this category.');
-  }
+  if (steps.length === 0) throw new Error('No actionable steps could be extracted.');
   return steps;
 };
 
-const generateRoutineForStep = async (apiKeys, userId, client, model, planTitle, catName, step, jobId, unitSystem) => {
-  const prompt = buildSingleRoutinePrompt(
-    planTitle, catName, step, unitSystem
-  );
+const buildSingleRoutinePrompt = (planTitle, step, unitSystem, existingRoutines) => {
+  let prompt = `Create EXACTLY ONE routine for the following step.
+Plan: ${planTitle}
+Step: ${step}
+
+CRITICAL INSTRUCTIONS:
+1. ${getUnitInstruction(unitSystem)}
+2. Format the description using a bulleted or numbered list.`;
+  if (existingRoutines && existingRoutines.length > 0) {
+    const existingStr = existingRoutines.map(r => `- ${r.schedule}: ${r.title}`).join('\n');
+    prompt += `\n\nExisting routines (do not schedule at these exact times):\n${existingStr}`;
+  }
+  return prompt;
+};
+
+const generateRoutineForStep = async (apiKeys, userId, client, model, planTitle, step, jobId, unitSystem, existing) => {
+  const prompt = buildSingleRoutinePrompt(planTitle, step, unitSystem, existing);
   return await executeWithRateLimitHandling(
     apiKeys, userId, client, model, prompt,
     'create_routine', getSingleCronParams(),
@@ -423,37 +428,31 @@ const generateRoutineForStep = async (apiKeys, userId, client, model, planTitle,
   );
 };
 
-const updateStepProgress = async (apiKeys, jobId, catName, catIndex, totalCats, stepIndex, totalSteps) => {
+const updateStepProgress = async (apiKeys, jobId, stepIndex, totalSteps) => {
   if (!jobId) return;
-  const catBase = (catIndex / totalCats) * 100;
-  const stepFraction = ((stepIndex + 1) / totalSteps) * (100 / totalCats);
-  const progress = Math.min(Math.round(catBase + stepFraction), 99);
-  await database.updateJobStatus(apiKeys, jobId, 'processing', { system_message: `Generating routines for ${catName}...`, progress });
+  const progress = Math.min(Math.round((stepIndex / totalSteps) * 100), 99);
+  await database.updateJobStatus(apiKeys, jobId, 'processing', { system_message: `Generating routines...`, progress });
 };
 
-const INTER_CALL_DELAY_MS = 2000;
-
-const processRoutineStep = async (apiKeys, userId, client, model, planTitle, cat, step, jobId, context) => {
-  const routine = await generateRoutineForStep(apiKeys, userId, client, model, planTitle, cat.name, step, jobId, context.unitSystem);
+const processRoutineStep = async (apiKeys, userId, client, model, planTitle, step, jobId, context) => {
+  const routine = await generateRoutineForStep(apiKeys, userId, client, model, planTitle, step, jobId, context.unitSystem, context.routinesState.generatedRoutines);
   if (!routine) return null;
   const linkedModule = planTitle?.module_title || planTitle;
   await handleUpsertUserCron(apiKeys, userId, { ...routine, linked_module: linkedModule });
   return routine;
 };
 
-const processCategoryRoutines = async (apiKeys, userId, client, model, planTitle, cat, jobId, context, catIndex, totalCats) => {
+const processPlanRoutines = async (apiKeys, userId, client, model, planArgs, jobId, context) => {
   const st = context.routinesState;
-  if (!st.steps) Object.assign(st, { steps: await extractCategorySteps(apiKeys, userId, client, model, cat, jobId), stepIndex: 0, catRoutines: [] });
+  const planTitleStr = planArgs.module_title || planArgs.plan_title || 'Plan';
+  if (!st.steps) Object.assign(st, { steps: await extractPlanSteps(apiKeys, userId, client, model, planArgs, jobId), stepIndex: 0 });
   for (let i = st.stepIndex; i < st.steps.length; i++) {
-    if (i > 0) await new Promise(r => setTimeout(r, INTER_CALL_DELAY_MS));
-    const routine = await processRoutineStep(apiKeys, userId, client, model, planTitle, cat, st.steps[i], jobId, context);
-    if (routine) st.catRoutines.push(routine);
+    if (i > 0) await new Promise(r => setTimeout(r, 2000));
+    const routine = await processRoutineStep(apiKeys, userId, client, model, planTitleStr, st.steps[i], jobId, context);
+    if (routine) st.generatedRoutines.push(routine);
     st.stepIndex = i + 1;
-    await updateStepProgress(apiKeys, jobId, cat.name, catIndex, totalCats, i, st.steps.length);
+    await updateStepProgress(apiKeys, jobId, i + 1, st.steps.length);
   }
-  const routines = st.catRoutines;
-  delete st.steps; delete st.stepIndex; delete st.catRoutines;
-  return routines;
 };
 
 const deleteStaleRoutines = async (apiKeys, userId, linkedModule) => {
@@ -472,23 +471,15 @@ const deduplicateRoutines = (routines) => {
   });
 };
 
-const iterateCategories = async (apiKeys, userId, client, model, planArgs, jobId, context) => {
-  const routines = context.routinesState.generatedRoutines;
-  const totalCats = planArgs.categories.length || 1;
-  for (let i = context.routinesState.catIndex; i < planArgs.categories.length; i++) {
-    const cat = planArgs.categories[i];
-    routines.push(...(await processCategoryRoutines(apiKeys, userId, client, model, planArgs, cat, jobId, context, i, totalCats)));
-    context.routinesState.catIndex = i + 1;
-  }
-};
-
 const executeRoutinesGeneration = async (apiKeys, userId, toolArgs, jobId, context) => {
-  if (!context.routinesState) context.routinesState = { catIndex: 0, generatedRoutines: [] };
+  if (!context.routinesState) context.routinesState = { stepIndex: 0, generatedRoutines: [] };
   const planArgs = await getPlanArgs(apiKeys, userId, toolArgs.plan_title);
   if (!planArgs) throw new Error(`Plan not found: ${toolArgs.plan_title}`);
-  if (context.routinesState.catIndex === 0) await deleteStaleRoutines(apiKeys, userId, planArgs.module_title || toolArgs.plan_title);
+  if (context.routinesState.stepIndex === 0 && !context.routinesState.steps) {
+    await deleteStaleRoutines(apiKeys, userId, planArgs.module_title || toolArgs.plan_title);
+  }
   const client = getGroqClient(apiKeys), model = getValidModel(apiKeys.groqModel);
-  await iterateCategories(apiKeys, userId, client, model, planArgs, jobId, context);
+  await processPlanRoutines(apiKeys, userId, client, model, planArgs, jobId, context);
   context.routinesState.generatedRoutines = deduplicateRoutines(context.routinesState.generatedRoutines);
   if (jobId) await database.updateJobStatus(apiKeys, jobId, 'processing', { system_message: 'Routines generated.', progress: 100 });
   return context.routinesState.generatedRoutines;
