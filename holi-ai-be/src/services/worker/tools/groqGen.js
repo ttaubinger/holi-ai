@@ -349,10 +349,11 @@ const getStepsParams = () => ({
 
 const buildExtractStepsPrompt = (category) => `You are an AI planner. Read the Category Content and extract distinct, schedulable routines into a JSON object with an 'actionable_steps' array of strings.
 CRITICAL RULES:
-1. Consolidate related tasks into a single routine entry. Do not extract granular sub-bullets.
-2. Each entry must represent a unique, independently schedulable action.
-3. Merge duplicate or near-duplicate entries.
-4. Return raw, valid JSON only without markdown formatting.
+1. Consolidate related tasks that occur at the same time into a single comprehensive routine entry.
+2. Ensure sequential steps are logically grouped so no two entries would be scheduled within 5 minutes of each other.
+3. Each entry must represent a unique, independently schedulable action.
+4. Merge duplicate or near-duplicate entries.
+5. Return raw, valid JSON only without markdown formatting.
 Category Content:
 ${category.content}`;
 
@@ -383,7 +384,8 @@ Category: ${catName}
 Step: ${step}
 
 CRITICAL INSTRUCTIONS:
-1. ${getUnitInstruction(unitSystem)}`;
+1. ${getUnitInstruction(unitSystem)}
+2. Format the description using a bulleted or numbered list.`;
 
 const slugify = (s) => s ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim() : '';
 
