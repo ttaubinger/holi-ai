@@ -379,29 +379,43 @@ const getPlanArgs = async (apiKeys, userId, title) => {
 };
 
 
-const buildExtractPlanStepsPrompt = (planArgs) => {
-  const planContent = planArgs.categories.map(c => `Category: ${c.name}\n${c.content}`).join('\n\n');
-  return `You are an AI planner. Read the entire Plan Content and extract all distinct, schedulable routines into a JSON object with an 'actionable_steps' array of strings.
+const buildExtractStepsPrompt = (category) => `You are an AI planner. Read the Category Content and extract distinct, schedulable routines into a JSON object with an 'actionable_steps' array of strings.
 CRITICAL RULES:
 1. Consolidate related tasks that occur at the same time into a single comprehensive routine entry.
 2. Ensure sequential steps are logically grouped so no two entries would be scheduled within 5 minutes of each other.
 3. Each entry must represent a unique, independently schedulable action.
-4. Merge duplicate or near-duplicate entries across all categories.
+4. Merge duplicate or near-duplicate entries.
 5. Return raw, valid JSON only without markdown formatting.
-Plan Content:
-${planContent}`;
-};
+Category Content:
+${category.content}`;
 
-const extractPlanSteps = async (apiKeys, userId, client, model, planArgs, jobId) => {
+const extractCategorySteps = async (apiKeys, userId, client, model, cat, jobId) => {
   const args = await executeWithRateLimitHandling(
     apiKeys, userId, client, model,
-    buildExtractPlanStepsPrompt(planArgs),
+    buildExtractStepsPrompt(cat),
     'extract_steps', getStepsParams(), null,
     jobId, 'routine generation', 4096
   );
-  const steps = args?.actionable_steps || [];
-  if (steps.length === 0) throw new Error('No actionable steps could be extracted.');
-  return steps;
+  return args?.actionable_steps || [];
+};
+
+const extractAllSteps = async (apiKeys, userId, client, model, planArgs, jobId) => {
+  const allSteps = [];
+  for (const cat of planArgs.categories) {
+    const steps = await extractCategorySteps(apiKeys, userId, client, model, cat, jobId);
+    allSteps.push(...steps);
+  }
+  return allSteps;
+};
+
+const deduplicateSteps = (steps) => {
+  const seen = new Set();
+  return steps.filter(step => {
+    const key = slugify(step);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 };
 
 const buildSingleRoutinePrompt = (planTitle, step, unitSystem, existingRoutines) => {
@@ -445,7 +459,10 @@ const processRoutineStep = async (apiKeys, userId, client, model, planTitle, ste
 const processPlanRoutines = async (apiKeys, userId, client, model, planArgs, jobId, context) => {
   const st = context.routinesState;
   const planTitleStr = planArgs.module_title || planArgs.plan_title || 'Plan';
-  if (!st.steps) Object.assign(st, { steps: await extractPlanSteps(apiKeys, userId, client, model, planArgs, jobId), stepIndex: 0 });
+  if (!st.steps) {
+    const rawSteps = await extractAllSteps(apiKeys, userId, client, model, planArgs, jobId);
+    Object.assign(st, { steps: deduplicateSteps(rawSteps), stepIndex: 0 });
+  }
   for (let i = st.stepIndex; i < st.steps.length; i++) {
     if (i > 0) await new Promise(r => setTimeout(r, 2000));
     const routine = await processRoutineStep(apiKeys, userId, client, model, planTitleStr, st.steps[i], jobId, context);
