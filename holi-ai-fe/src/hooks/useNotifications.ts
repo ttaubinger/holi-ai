@@ -76,6 +76,15 @@ const handleNativeScheduling = async (crons: Cron[]) => {
   await scheduleNative(notifs, pendingResult);
 };
 
+const cancelAllNativeNotifications = async () => {
+  const pendingResult = await LocalNotifications.getPending();
+  if (pendingResult.notifications.length > 0) {
+    await LocalNotifications.cancel({
+      notifications: pendingResult.notifications.map((n: any) => ({ id: n.id }))
+    });
+  }
+};
+
 const isCronOneOff = (c: Cron) => {
   const p = c.cron_expression!.split(' ');
   const d = p[2] !== '*', mo = p[3] !== '*';
@@ -133,6 +142,17 @@ const setupNativeListeners = (onDeepLink: any, intervalRef: any) => {
   };
 };
 
+const useSyncNativeNotifications = (crons: Cron[]) => {
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    if (!crons?.length) {
+      cancelAllNativeNotifications();
+      return;
+    }
+    handleNativeScheduling(crons);
+  }, [crons]);
+};
+
 const useNativeScheduling = (crons: Cron[], intervalRef: any, onDeepLink?: (route: string, extra?: any, appWasClosed?: boolean) => void) => {
   const onDeepLinkRef = useRef(onDeepLink);
   useEffect(() => { onDeepLinkRef.current = onDeepLink; }, [onDeepLink]);
@@ -142,10 +162,7 @@ const useNativeScheduling = (crons: Cron[], intervalRef: any, onDeepLink?: (rout
     return setupNativeListeners((r: string, e: any, w: boolean) => onDeepLinkRef.current?.(r, e, w), intervalRef);
   }, [intervalRef]);
 
-  useEffect(() => {
-    if (!Capacitor.isNativePlatform() || !crons?.length) return;
-    handleNativeScheduling(crons);
-  }, [crons]);
+  useSyncNativeNotifications(crons);
 };
 
 const useWebScheduling = (crons: Cron[], intervalRef: any, deleteCron: (id: string) => void, lastFiredRef: any) => {
