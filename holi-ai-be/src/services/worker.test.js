@@ -350,7 +350,7 @@ const generateTestJob = () => {
     orchestrator.getGroqClient.mockReturnValue({
       chat: { completions: { create: jest.fn()
         .mockResolvedValueOnce({ choices: [{ message: { tool_calls: [{ function: { arguments: '{"actionable_steps": ["step1"]}' } }] } }] })
-        .mockResolvedValueOnce({ choices: [{ message: { tool_calls: [{ function: { arguments: '{"title": "c1", "schedule": "daily", "cron_expression": "* * * * *", "category": "Daily", "description": "desc"}' } }] } }] })
+        .mockResolvedValueOnce({ choices: [{ message: { tool_calls: [{ function: { arguments: '{"title": "c1", "schedule": "daily", "cron_expression": "* * * * *", "frequency": "Daily", "category": "Fitness", "description": "desc"}' } }] } }] })
       } }
     });
     orchestrator.executeAgentWorkflow.mockImplementation(async (a, b, c, d, e, exec) => {

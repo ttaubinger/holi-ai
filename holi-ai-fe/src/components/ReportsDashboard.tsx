@@ -36,7 +36,7 @@ const getCategoryDistributionData = (logs: ActivityLog[], crons: Cron[]) => {
   const counts: Record<string, number> = {};
   logs.forEach(l => {
     const cron = crons.find(c => c.cron_id === l.cron_id);
-    const cat = cron?.domain || 'Custom';
+    const cat = cron?.category || 'Custom';
     counts[cat] = (counts[cat] || 0) + 1;
   });
   return Object.keys(counts).map(category => ({ name: category, value: counts[category] || 0, fill: getCategoryColor(category) })).sort((a, b) => b.value - a.value);
@@ -50,7 +50,7 @@ const getRoutineDistributionData = (logs: ActivityLog[], crons: Cron[]) => {
     counts[title] = (counts[title] || 0) + 1;
     if (!fills[title]) {
       const cron = crons.find(c => c.cron_id === l.cron_id);
-      fills[title] = getCategoryColor(cron?.domain || 'Custom') || 'var(--accent-color)';
+      fills[title] = getCategoryColor(cron?.category || 'Custom') || 'var(--accent-color)';
     }
   });
   return Object.keys(counts).map(title => ({ title, count: counts[title] || 0, fill: fills[title] })).sort((a, b) => b.count - a.count).slice(0, 5);
@@ -194,7 +194,7 @@ const SpecificRoutineCharts = ({ logs, cron }: any) => {
   const lastLogDate = logs[logs.length-1].logged_at ? new Date(logs[logs.length-1].logged_at).toLocaleDateString() : '-';
   const numData = useMemo(() => getSpecificNumericTrend(logs), [logs]);
   const trendData = useMemo(() => getTrendData(logs), [logs]);
-  const color = getCategoryColor(cron?.domain || 'Custom');
+  const color = getCategoryColor(cron?.category || 'Custom');
 
   return (
     <>

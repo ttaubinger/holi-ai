@@ -742,7 +742,7 @@ const getFilteredCrons = (crons: Cron[], filter: string, reads: string[]) => {
   const base = crons || [];
   if (filter === 'Due') return filterDueCrons(base, reads);
   if (filter.startsWith('holi-')) return filterTimeGroupCrons(base, filter);
-  if (filter !== 'All') return base.filter((c: Cron) => (c.category || 'Custom') === filter);
+  if (filter !== 'All') return base.filter((c: Cron) => (c.frequency || 'Custom') === filter);
   return base;
 };
 
@@ -753,7 +753,7 @@ const useActiveRoutinesState = (crons: any, injectedFilter: string, setInjectedF
   const [creatingCron, setCreatingCron] = useState<boolean>(false);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const setSelectedCron = (c: Cron | null) => { if (c) { markRead(c.cron_id); } setSelectedCronState(c); };
-  const categories = crons && crons.length > 0 ? ['All', 'Due', ...Array.from(new Set(crons.map((c: Cron) => c.category || 'Custom')))] : ['All', 'Due'];
+  const categories = crons && crons.length > 0 ? ['All', 'Due', ...Array.from(new Set(crons.map((c: Cron) => c.frequency || 'Custom')))] : ['All', 'Due'];
   const filteredCrons = sortCrons(getFilteredCrons(crons, injectedFilter || 'All', reads), sortOrder);
   return { selectedCron, setSelectedCron, deleting, setDeleting, filter: injectedFilter || 'All', setFilter: setInjectedFilter, categories, filteredCrons, sortOrder, setSortOrder, editingCron, setEditingCron, creatingCron, setCreatingCron };
 };

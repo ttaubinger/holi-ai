@@ -353,18 +353,18 @@ const getSingleCronParams = () => ({
     title: { type: 'string' },
     schedule: { type: 'string', description: 'Label, e.g. "06:45 daily".' },
     cron_expression: { type: 'string' },
-    category: { type: 'string', enum: ['Daily', 'Weekly', 'Monthly', 'Custom'] },
-    domain: { type: 'string', enum: ['Fitness', 'Nutrition', 'Mindfulness', 'Health', 'Sleep', 'Custom'] },
+    frequency: { type: 'string', enum: ['Daily', 'Weekly', 'Monthly', 'Custom'] },
+    category: { type: 'string', enum: ['Fitness', 'Nutrition', 'Mindfulness', 'Health', 'Sleep', 'Custom'] },
     description: { type: 'string' },
     requires_logging: { type: 'boolean' },
     log_type: { type: 'string', enum: ['number', 'boolean', 'text'] },
     log_unit: { type: 'string' }
   },
-  required: ['title', 'schedule', 'cron_expression', 'category', 'domain', 'description']
+  required: ['title', 'schedule', 'cron_expression', 'frequency', 'category', 'description']
 });
 
 const validateSingleRoutine = (args) => {
-  if (!args || !args.title || !args.schedule || !args.cron_expression || !args.category || !args.description) {
+  if (!args || !args.title || !args.schedule || !args.cron_expression || !args.frequency || !args.category || !args.description) {
     throw new Error('Invalid single routine arguments generated');
   }
 };
@@ -446,7 +446,7 @@ const applyNewRoutineTime = (routine, mins) => {
   const p = routine.cron_expression.split(' ');
   p[0] = m.toString(); p[1] = h.toString();
   routine.cron_expression = p.join(' ');
-  routine.schedule = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${routine.category}`;
+  routine.schedule = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${routine.frequency}`;
   return routine;
 };
 
