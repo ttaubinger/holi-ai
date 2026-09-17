@@ -471,7 +471,7 @@ Step: ${step}
 
 CRITICAL INSTRUCTIONS:
 1. ${getUnitInstruction(unitSystem)}
-2. Format the description using a bulleted or numbered list.
+2. Format the description using a proper bulleted or numbered list. NEVER use dashes (-) or hyphens for bullets. If not using a list, distinct logical entries MUST start on a new line.
 3. Schedule at least 5 minutes apart from any existing routine.
 4. Set requires_logging to true ONLY for measurable/trackable actions (intake, exercise, metrics). Set false for instructional routines.`;
   return prompt + getExistingRoutinesStr(existingRoutines);
