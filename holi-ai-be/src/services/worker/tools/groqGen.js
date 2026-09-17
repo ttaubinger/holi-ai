@@ -232,7 +232,7 @@ CRITICAL INSTRUCTIONS:
 1. ${getUnitInstruction(unitSystem)}
 2. Extract ALL gathered user facts and summarize them clearly as a markdown bullet list in the 'user_profile_summary' field.
 3. The 'description' field MUST provide a concise, 1-2 sentence high-level summary of the overall strategy. Do NOT outline all the phases here.
-4. The 'plan_title' MUST be short, punchy, and concise
+4. The 'plan_title' MUST be short, punchy, and concise.
 5. The 'category_names' MUST be an array of distinct, actionable phases, modules, or pillars of the curriculum. You MUST break the plan down into multiple distinct categories. Do NOT return a single monolithic category representing the whole plan.
 6. NEVER use HTML tags for formatting. Use strictly standard Markdown.`;
 
