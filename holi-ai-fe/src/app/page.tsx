@@ -1375,16 +1375,25 @@ const useActivityHandlers = (data: any, setData: any, hiddenCrons: any, setHidde
   return { handleLog, handleDismiss };
 };
 
-const useActivitiesState = (crons: any) => {
+const useActivitiesState = (crons: any, initialFilter = 'All') => {
   const { logs, isSubmitting, submitLog } = useActivities('usr_1');
   const [data, setData] = useState<Record<string, string | boolean>>({});
   const [hiddenCrons, setHiddenCrons] = useState<Record<string, boolean>>({});
-  const [filter, setFilter] = useState<string>('All');
+  const [filter, setFilter] = useState<string>(initialFilter);
 
   const [selectedCron, setSelectedCron] = useState<any>(null);
   const loggableCrons = getLoggableCrons(crons, logs, hiddenCrons);
   const categories = loggableCrons.length > 0 ? ['All', ...Array.from(new Set(loggableCrons.map((c: any) => c.category || 'Custom')))] : [];
-  const filteredCrons = filter === 'All' ? loggableCrons : loggableCrons.filter((c: any) => (c.category || 'Custom') === filter);
+  
+  let filteredCrons = loggableCrons;
+  if (filter !== 'All') {
+    if (loggableCrons.some((c: any) => c.cron_id === filter)) {
+      filteredCrons = loggableCrons.filter((c: any) => c.cron_id === filter);
+    } else {
+      filteredCrons = loggableCrons.filter((c: any) => (c.category || 'Custom') === filter);
+    }
+  }
+    
   const { handleLog, handleDismiss } = useActivityHandlers(data, setData, hiddenCrons, setHiddenCrons, isSubmitting, submitLog);
 
   return { data, setData, isSubmitting, handleLog, handleDismiss, loggableCrons, filter, setFilter, categories, filteredCrons, selectedCron, setSelectedCron };
@@ -1425,8 +1434,8 @@ const ActivitiesList = ({ filteredCrons, data, setData, isSubmitting, handleLog,
   </div>
 );
 
-const ActivitiesView = ({ dict, crons, onClose }: any) => {
-  const { data, setData, isSubmitting, handleLog, handleDismiss, loggableCrons, filter, setFilter, categories, filteredCrons, selectedCron, setSelectedCron } = useActivitiesState(crons);
+const ActivitiesView = ({ dict, crons, onClose, initialFilter }: any) => {
+  const { data, setData, isSubmitting, handleLog, handleDismiss, loggableCrons, filter, setFilter, categories, filteredCrons, selectedCron, setSelectedCron } = useActivitiesState(crons, initialFilter);
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'var(--bg-color)', zIndex: 3000, overflowY: 'auto' }}>
       <div className="biometrics-form-container" style={{ maxWidth: '600px', margin: '0 auto', padding: '1.5rem' }}>
