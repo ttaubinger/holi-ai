@@ -672,11 +672,18 @@ const DashboardHeader = ({ mod, dict, onDelete }: any) => (
 
 
 
+const formatScheduleString = (s?: string) => {
+  if (!s) return '';
+  let formatted = s.replace(/\\b[a-z]/g, char => char.toUpperCase());
+  formatted = formatted.replace(/,(?=[^\\s])/g, ', ');
+  return formatted;
+};
+
 const CronCard = ({ cron, onDelete, onToggle, onClick, onEdit }: { readonly cron: Cron, readonly onDelete: (id: string, title: string) => void, readonly onToggle: (id: string, active: boolean) => void, readonly onClick: () => void, readonly onEdit: (cron: Cron) => void }) => (
   <div onClick={onClick} style={{ background: 'var(--panel-bg)', padding: '1rem', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', opacity: cron.is_active ? 1 : 0.5, cursor: 'pointer' }}>
     <div>
       <div style={{ fontWeight: 'bold' }}>{cron.title}</div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{cron.schedule}</div>
+      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{formatScheduleString(cron.schedule)}</div>
     </div>
     <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
       <button onClick={(e) => { e.stopPropagation(); onEdit(cron); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}>✏️</button>
@@ -1460,6 +1467,83 @@ const EditRoutineModalField = ({ label, val, set, multi }: any) => (
   </label>
 );
 
+const generateScheduleString = (h: string, m: string, freq: string, dow: string) => {
+  const time = `${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
+  if (freq === 'Weekly' && dow !== '*' && dow !== '1,2,3,4,5,6,0') {
+    const map: Record<string, string> = { '1': 'Mon', '2': 'Tue', '3': 'Wed', '4': 'Thu', '5': 'Fri', '6': 'Sat', '0': 'Sun' };
+    const days = dow.split(',').map(d => map[d]).filter(Boolean).join(',');
+    return `${time} ${days}`;
+  }
+  return `${time} ${freq}`;
+};
+
+const CronBuilderTimeSelect = ({ timeStr, frequency, handleTimeChange, updateCron, hour, minute }: any) => (
+  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+    <div style={{ flex: 1 }}>
+      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Time</div>
+      <input type="time" className="apple-input" value={timeStr} onChange={handleTimeChange} />
+    </div>
+    <div style={{ flex: 1 }}>
+      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Frequency</div>
+      <select className="apple-input" value={frequency} onChange={e => updateCron(hour, minute, e.target.value, e.target.value === 'Weekly' ? '1,2,3,4,5' : '*', e.target.value === 'Monthly' ? '1' : '*')}>
+        <option value="Daily">Daily</option>
+        <option value="Weekly">Weekly</option>
+        <option value="Monthly">Monthly</option>
+        <option value="Custom">Custom</option>
+      </select>
+    </div>
+  </div>
+);
+
+const CronBuilderDaysSelect = ({ dow, updateCron, hour, minute }: any) => {
+  const days = [ { label: 'Mo', val: '1' }, { label: 'Tu', val: '2' }, { label: 'We', val: '3' }, { label: 'Th', val: '4' }, { label: 'Fr', val: '5' }, { label: 'Sa', val: '6' }, { label: 'Su', val: '0' } ];
+  const handleDayToggle = (val: string) => {
+    let curr = dow === '*' ? [] : dow.split(',');
+    if (curr.includes(val)) curr = curr.filter((x: string) => x !== val); else curr.push(val);
+    updateCron(hour, minute, 'Weekly', curr.length > 0 ? curr.sort().join(',') : '*', '*');
+  };
+  return (
+    <div>
+      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', display: 'block' }}>Days of Week</div>
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        {days.map(d => (
+          <button key={d.val} onClick={(e) => { e.preventDefault(); handleDayToggle(d.val); }} style={{ background: dow.split(',').includes(d.val) ? 'var(--accent-color)' : 'var(--bg-color)', color: dow.split(',').includes(d.val) ? '#fff' : 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '0.85rem' }}>
+            {d.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const CronBuilderMonthSelect = ({ dom, updateCron, hour, minute }: any) => (
+  <div>
+    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Day of Month</div>
+    <input type="number" min="1" max="31" className="apple-input" value={dom === '*' ? '1' : dom} onChange={e => updateCron(hour, minute, 'Monthly', '*', e.target.value)} />
+  </div>
+);
+
+const CronBuilder = ({ data, setData }: any) => {
+  const p = (data.cron_expression || '0 8 * * *').split(' ');
+  let frequency = data.frequency;
+  if (!frequency) {
+    if (p[4] === '*' && p[2] === '*') frequency = 'Daily';
+    else if (p[4] === '*') frequency = 'Monthly';
+    else frequency = 'Weekly';
+  }
+  const updateCron = (h: string, m: string, f: string, w: string, d: string) => {
+    setData({ ...data, cron_expression: `${m} ${h} ${d} * ${w}`, frequency: f, schedule: generateScheduleString(h, m, f, w) });
+  };
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', background: 'var(--panel-bg)', padding: '1rem', borderRadius: '12px' }}>
+      <CronBuilderTimeSelect timeStr={`${(p[1] || '8').padStart(2, '0')}:${(p[0] || '0').padStart(2, '0')}`} frequency={frequency} handleTimeChange={(e: any) => { const [h, m] = e.target.value.split(':'); if (h && m) updateCron(parseInt(h, 10).toString(), parseInt(m, 10).toString(), frequency, p[4] || '*', p[2] || '*'); }} updateCron={updateCron} hour={p[1] || '8'} minute={p[0] || '0'} dom={p[2] || '*'} />
+      {frequency === 'Weekly' && <CronBuilderDaysSelect dow={p[4] || '*'} updateCron={updateCron} hour={p[1] || '8'} minute={p[0] || '0'} />}
+      {frequency === 'Monthly' && <CronBuilderMonthSelect dom={p[2] || '*'} updateCron={updateCron} hour={p[1] || '8'} minute={p[0] || '0'} />}
+      {frequency === 'Custom' && <EditRoutineModalField label="Cron Expression" val={data.cron_expression} set={(v: string) => setData({...data, cron_expression: v})} />}
+    </div>
+  );
+};
+
 const EditRoutineModal = ({ cron, onSave, onClose, dict }: any) => {
   const [data, setData] = useState({ ...cron });
   return (
@@ -1468,8 +1552,7 @@ const EditRoutineModal = ({ cron, onSave, onClose, dict }: any) => {
         <ModalHeader title={dict.editRoutine || 'Edit Routine'} onClose={onClose} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
           <EditRoutineModalField label="Title" val={data.title} set={(v: string) => setData({...data, title: v})} />
-          <EditRoutineModalField label="Schedule" val={data.schedule} set={(v: string) => setData({...data, schedule: v})} />
-          <EditRoutineModalField label="Cron Expression" val={data.cron_expression} set={(v: string) => setData({...data, cron_expression: v})} />
+          <CronBuilder data={data} setData={setData} />
           <EditRoutineModalField label="Category" val={data.category} set={(v: string) => setData({...data, category: v})} />
           <EditRoutineModalField label="Description" val={data.description} set={(v: string) => setData({...data, description: v})} multi />
           <button className="apple-button" onClick={() => onSave(data)}>{dict.save || 'Save'}</button>
@@ -1485,6 +1568,7 @@ const RoutineDetailModal = ({ cron, dict, onClose, onLogActivity }: any) => {
     <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'var(--bg-color)', zIndex: 4000, overflowY: 'auto' }}>
       <div className="biometrics-form-container" style={{ maxWidth: '600px', margin: '0 auto', padding: '1.5rem' }}>
         <ModalHeader title={cron.title} onClose={onClose} />
+        <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>{formatScheduleString(cron.schedule)}</div>
         <div style={{ padding: '1rem', background: 'var(--panel-bg)', borderRadius: '12px' }}>
           <p style={{ margin: 0, whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>{cron.description ? cron.description.replace(/\\n/g, '\n') : 'No additional details provided.'}</p>
         </div>
