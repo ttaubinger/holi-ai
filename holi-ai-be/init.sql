@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS user_crons (
     description TEXT,
     is_active BOOLEAN DEFAULT TRUE,
     category TEXT DEFAULT 'Custom',
+    domain TEXT DEFAULT 'Custom',
     linked_module TEXT,
     requires_logging BOOLEAN DEFAULT FALSE,
     log_type TEXT,

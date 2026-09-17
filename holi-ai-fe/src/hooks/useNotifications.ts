@@ -12,6 +12,7 @@ export interface Cron {
   is_active: boolean;
   requires_logging?: boolean;
   category?: string;
+  domain?: string;
   log_type?: string;
 }
 

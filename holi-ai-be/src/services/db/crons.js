@@ -12,12 +12,16 @@ const deleteUserCron = async (keys, userId, cronId) => {
 
 const upsertCronRow = async (keys, userId, c) => {
   const cat = c.category || 'Custom';
+  const dom = c.domain || 'Custom';
   const pool = getPgPool(keys);
   if (pool) {
-    await pool.query('INSERT INTO user_crons (user_id, cron_id, title, schedule, cron_expression, description, is_active, category, linked_module, requires_logging, log_type, log_unit) VALUES ($1, $2, $3, $4, $5, $6, true, $7, $8, $9, $10, $11) ON CONFLICT (user_id, cron_id) DO UPDATE SET title=EXCLUDED.title, schedule=EXCLUDED.schedule, cron_expression=EXCLUDED.cron_expression, description=EXCLUDED.description, is_active=true, category=EXCLUDED.category, linked_module=EXCLUDED.linked_module, requires_logging=EXCLUDED.requires_logging, log_type=EXCLUDED.log_type, log_unit=EXCLUDED.log_unit', [userId, c.cron_id, c.title, c.schedule, c.cron_expression, c.description || '', cat, c.linked_module || null, c.requires_logging || false, c.log_type || null, c.log_unit || null]);
+    await pool.query(
+      'INSERT INTO user_crons (user_id, cron_id, title, schedule, cron_expression, description, is_active, category, domain, linked_module, requires_logging, log_type, log_unit) VALUES ($1, $2, $3, $4, $5, $6, true, $7, $8, $9, $10, $11, $12) ON CONFLICT (user_id, cron_id) DO UPDATE SET title=EXCLUDED.title, schedule=EXCLUDED.schedule, cron_expression=EXCLUDED.cron_expression, description=EXCLUDED.description, is_active=true, category=EXCLUDED.category, domain=EXCLUDED.domain, linked_module=EXCLUDED.linked_module, requires_logging=EXCLUDED.requires_logging, log_type=EXCLUDED.log_type, log_unit=EXCLUDED.log_unit',
+      [userId, c.cron_id, c.title, c.schedule, c.cron_expression, c.description || '', cat, dom, c.linked_module || null, c.requires_logging || false, c.log_type || null, c.log_unit || null]
+    );
     return;
   }
-  await getSbClient(keys).from('user_crons').upsert({ user_id: userId, cron_id: c.cron_id, title: c.title, schedule: c.schedule, cron_expression: c.cron_expression, description: c.description || '', is_active: true, category: cat, linked_module: c.linked_module || null, requires_logging: c.requires_logging || false, log_type: c.log_type || null, log_unit: c.log_unit || null }, { onConflict: 'user_id,cron_id' });
+  await getSbClient(keys).from('user_crons').upsert({ user_id: userId, cron_id: c.cron_id, title: c.title, schedule: c.schedule, cron_expression: c.cron_expression, description: c.description || '', is_active: true, category: cat, domain: dom, linked_module: c.linked_module || null, requires_logging: c.requires_logging || false, log_type: c.log_type || null, log_unit: c.log_unit || null }, { onConflict: 'user_id,cron_id' });
 };
 
 const toggleUserCron = async (keys, userId, cronId, isActive) => {
@@ -41,10 +45,10 @@ const upsertCrons = async (keys, userId, crons) => {
 const fetchUserCrons = async (keys, userId) => {
   const pool = getPgPool(keys);
   if (pool) {
-    const res = await pool.query('SELECT cron_id, title, schedule, cron_expression, description, is_active, category, linked_module, requires_logging, log_type, log_unit FROM user_crons WHERE user_id = $1', [userId]);
+    const res = await pool.query('SELECT cron_id, title, schedule, cron_expression, description, is_active, category, domain, linked_module, requires_logging, log_type, log_unit FROM user_crons WHERE user_id = $1', [userId]);
     return res.rows;
   }
-  const { data, error } = await getSbClient(keys).from('user_crons').select('cron_id, title, schedule, cron_expression, description, is_active, category, linked_module, requires_logging, log_type, log_unit').eq('user_id', userId);
+  const { data, error } = await getSbClient(keys).from('user_crons').select('cron_id, title, schedule, cron_expression, description, is_active, category, domain, linked_module, requires_logging, log_type, log_unit').eq('user_id', userId);
   if (error) throw new Error(error.message);
   return data || [];
 };

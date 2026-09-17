@@ -353,13 +353,14 @@ const getSingleCronParams = () => ({
     title: { type: 'string' },
     schedule: { type: 'string', description: 'Label, e.g. "06:45 daily".' },
     cron_expression: { type: 'string' },
-    category: { type: 'string', enum: ['Fitness', 'Nutrition', 'Mindfulness', 'Health', 'Sleep', 'Custom'] },
+    category: { type: 'string', enum: ['Daily', 'Weekly', 'Monthly', 'Custom'] },
+    domain: { type: 'string', enum: ['Fitness', 'Nutrition', 'Mindfulness', 'Health', 'Sleep', 'Custom'] },
     description: { type: 'string' },
     requires_logging: { type: 'boolean' },
     log_type: { type: 'string', enum: ['number', 'boolean', 'text'] },
     log_unit: { type: 'string' }
   },
-  required: ['title', 'schedule', 'cron_expression', 'category', 'description']
+  required: ['title', 'schedule', 'cron_expression', 'category', 'domain', 'description']
 });
 
 const validateSingleRoutine = (args) => {
