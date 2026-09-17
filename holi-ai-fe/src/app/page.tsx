@@ -18,6 +18,16 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import parser from 'cron-parser';
 import { wipeClientStorage } from '../lib/wipe';
+const sanitizeHtmlForMarkdown = (str?: string) => {
+  if (!str) return "";
+  return str
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/?(b|strong)>/gi, "**")
+    .replace(/<\/?(i|em)>/gi, "*")
+    // eslint-disable-next-line sonarjs/slow-regex
+    .replace(/<[^>]+>/g, "");
+};
+
 
 const WrapIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -130,7 +140,7 @@ const InfoModal = ({ title, text, close, dict }: any) => (
   <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
     <div className="card" style={{ width: '100%', maxWidth: '400px', position: 'relative', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
       <h3 style={{ marginBottom: '1rem', color: 'var(--accent-color)' }}>{title}</h3>
-      <p style={{ fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--text-secondary)', whiteSpace: 'pre-line', userSelect: 'text' }}>{(text || '').replace(/\\n/g, '\n')}</p>
+      <p style={{ fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--text-secondary)', whiteSpace: 'pre-line', userSelect: 'text' }}>{(text || '').replace(/\n/g, '\n')}</p>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
         <button onClick={(e) => { e.preventDefault(); close(); }} type="button" className="apple-button" style={{ width: 'auto', padding: '0.5rem 1.5rem' }}>{dict.gotIt}</button>
       </div>
@@ -480,13 +490,13 @@ const ChatTable = ({ node: _node, ...props }: any) => (
 
 const ChatMarkdown = ({ content }: any) => (
   <ReactMarkdown remarkPlugins={[remarkGfm]} className="markdown-body" components={{ table: ChatTable }}>
-    {content}
+    {sanitizeHtmlForMarkdown(content)}
   </ReactMarkdown>
 );
 
 const ChatBubbleInner = ({ isUser, content, isError, onRetry, timestamp }: any) => (
   <div style={{ display: 'inline-block', padding: '0.85rem', borderRadius: '18px', maxWidth: '85%', background: isUser ? 'var(--accent-color)' : 'var(--panel-bg)', color: isUser ? '#fff' : 'var(--text-primary)', textAlign: 'left' }}>
-    <ChatMarkdown content={content} />
+    <ChatMarkdown content={sanitizeHtmlForMarkdown(content)} />
     <ChatBubbleTimestamp timestamp={timestamp} isUser={isUser} />
     <ChatBubbleRetry isError={isError} onRetry={onRetry} />
   </div>
@@ -494,7 +504,7 @@ const ChatBubbleInner = ({ isUser, content, isError, onRetry, timestamp }: any) 
 
 const ChatBubble = ({ isUser, content, isError, onRetry, timestamp }: { readonly isUser: boolean; readonly content: string; readonly isError?: boolean; readonly onRetry?: (() => void) | undefined; readonly timestamp?: string | undefined }) => (
   <div style={{ marginBottom: '1rem', textAlign: isUser ? 'right' : 'left', position: 'relative' }}>
-    <ChatBubbleInner isUser={isUser} content={content} isError={isError} onRetry={onRetry} timestamp={timestamp} />
+    <ChatBubbleInner isUser={isUser} content={sanitizeHtmlForMarkdown(content)} isError={isError} onRetry={onRetry} timestamp={timestamp} />
   </div>
 );
 
@@ -625,7 +635,7 @@ const ActionModuleCategory = ({ c }: any) => (
     <h4 style={{ marginBottom: '0.5rem', color: 'var(--accent-color)' }}>{c.name}</h4>
     <div style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
       <ReactMarkdown remarkPlugins={[remarkGfm]} className="markdown-body" components={{ table: ChatTable }}>
-        {c.content || '*No content available.*'}
+        {sanitizeHtmlForMarkdown(c.content) || '*No content available.*'}
       </ReactMarkdown>
     </div>
   </div>
@@ -662,7 +672,7 @@ const DashboardHeader = ({ mod, dict, onDelete }: any) => (
     <h1 style={{ fontSize: '2rem', marginBottom: '1rem', paddingRight: '2.5rem' }}>{mod.module_title}</h1>
     <div className="card" style={{ marginBottom: '1rem' }}>
       <h3 style={{ marginBottom: '0.5rem' }}>{dict.diagnostic || "Description"}</h3>
-      <div style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-secondary)' }}><ReactMarkdown remarkPlugins={[remarkGfm]} className="markdown-body" components={{ table: ChatTable }}>{mod.description}</ReactMarkdown></div>
+      <div style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-secondary)' }}><ReactMarkdown remarkPlugins={[remarkGfm]} className="markdown-body" components={{ table: ChatTable }}>{sanitizeHtmlForMarkdown(mod.description)}</ReactMarkdown></div>
       {mod.key_metrics?.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', marginTop: '1rem' }}>{mod.key_metrics.map((m: any, i: number) => <ActionMetric key={i} label={m.label} value={m.value} />)}</div>
       )}
@@ -674,10 +684,11 @@ const DashboardHeader = ({ mod, dict, onDelete }: any) => (
 
 const formatScheduleString = (s?: string) => {
   if (!s) return '';
-  let formatted = s.replace(/\\b[a-z]/g, char => char.toUpperCase());
-  formatted = formatted.replace(/,(?=[^\\s])/g, ', ');
+  let formatted = s.replace(/\b[a-z]/g, char => char.toUpperCase());
+  formatted = formatted.replace(/,(?=[^\s])/g, ', ');
   return formatted;
 };
+
 
 const CronCard = ({ cron, onDelete, onToggle, onClick, onEdit }: { readonly cron: Cron, readonly onDelete: (id: string, title: string) => void, readonly onToggle: (id: string, active: boolean) => void, readonly onClick: () => void, readonly onEdit: (cron: Cron) => void }) => (
   <div onClick={onClick} style={{ background: 'var(--panel-bg)', padding: '1rem', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', opacity: cron.is_active ? 1 : 0.5, cursor: 'pointer' }}>
