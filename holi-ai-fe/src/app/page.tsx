@@ -670,18 +670,7 @@ const DashboardHeader = ({ mod, dict, onDelete }: any) => (
   </div>
 );
 
-const CronModal = ({ title, schedule, text, close }: any) => (
-  <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={close}>
-    <div className="card" style={{ width: '100%', maxWidth: '400px', position: 'relative', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
-      <h3 style={{ marginBottom: '0.25rem', color: 'var(--accent-color)' }}>{title}</h3>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>{schedule}</div>
-      <p style={{ fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--text-secondary)', whiteSpace: 'pre-line', userSelect: 'text' }}>{text || 'No description provided.'}</p>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
-        <button onClick={(e) => { e.preventDefault(); close(); }} type="button" className="apple-button" style={{ width: 'auto', padding: '0.5rem 1.5rem' }}>Close</button>
-      </div>
-    </div>
-  </div>
-);
+
 
 const CronCard = ({ cron, onDelete, onToggle, onClick, onEdit }: { readonly cron: Cron, readonly onDelete: (id: string, title: string) => void, readonly onToggle: (id: string, active: boolean) => void, readonly onClick: () => void, readonly onEdit: (cron: Cron) => void }) => (
   <div onClick={onClick} style={{ background: 'var(--panel-bg)', padding: '1rem', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', opacity: cron.is_active ? 1 : 0.5, cursor: 'pointer' }}>
@@ -769,9 +758,9 @@ const CategoryTabs = ({ categories, filter, setFilter, setCreatingCron }: any) =
   </div>
 );
 
-const ActiveRoutinesModals = ({ s, dict, onDelete, updateCron, createCron }: any) => (
+const ActiveRoutinesModals = ({ s, dict, onDelete, updateCron, createCron, onLogActivity }: any) => (
   <>
-    {s.selectedCron && <CronModal title={s.selectedCron.title} schedule={s.selectedCron.schedule} text={s.selectedCron.description} close={() => s.setSelectedCron(null)} />}
+    {s.selectedCron && <RoutineDetailModal cron={s.selectedCron} dict={dict} onClose={() => s.setSelectedCron(null)} onLogActivity={() => { s.setSelectedCron(null); if (onLogActivity) onLogActivity(s.selectedCron.cron_id); }} />}
     {s.deleting && <ConfirmModal title={dict.confirmDelete} text={`${dict.deleteCronText}: "${s.deleting.title}"?`} onConfirm={() => { onDelete(s.deleting.id); s.setDeleting(null); }} onCancel={() => s.setDeleting(null)} dict={dict} />}
     {s.editingCron && <EditRoutineModal cron={s.editingCron} dict={dict} onClose={() => s.setEditingCron(null)} onSave={(d: any) => { updateCron(d.cron_id, d); s.setEditingCron(null); }} />}
     {s.creatingCron && <EditRoutineModal cron={{ title: '', schedule: '', cron_expression: '', category: '', description: '' }} dict={dict} onClose={() => s.setCreatingCron(false)} onSave={(d: any) => { createCron(crypto.randomUUID(), d); s.setCreatingCron(false); }} />}
@@ -784,7 +773,7 @@ const SortToggle = ({ sortOrder, setSortOrder }: any) => (
   </button>
 );
 
-const ActiveRoutines = ({ crons, dict, onDelete, onToggle, filter, setFilter, reads, markRead, updateCron, createCron }: any) => {
+const ActiveRoutines = ({ crons, dict, onDelete, onToggle, filter, setFilter, reads, markRead, updateCron, createCron, onLogActivity }: any) => {
   const s = useActiveRoutinesState(crons, filter, setFilter, reads, markRead);
   if (!crons || crons.length === 0) return null;
   return (
@@ -795,7 +784,7 @@ const ActiveRoutines = ({ crons, dict, onDelete, onToggle, filter, setFilter, re
       </div>
       <CategoryTabs categories={s.categories} filter={filter} setFilter={setFilter} setCreatingCron={s.setCreatingCron} />
       {s.filteredCrons.map((c: Cron, i: number) => <CronCard key={i} cron={c} onDelete={(id, title) => s.setDeleting({id, title})} onToggle={onToggle} onClick={() => s.setSelectedCron(c)} onEdit={(cron) => s.setEditingCron(cron)} />)}
-      <ActiveRoutinesModals s={s} dict={dict} onDelete={onDelete} updateCron={updateCron} createCron={createCron} />
+      <ActiveRoutinesModals s={s} dict={dict} onDelete={onDelete} updateCron={updateCron} createCron={createCron} onLogActivity={onLogActivity} />
     </div>
   );
 };
@@ -838,10 +827,10 @@ const DashboardView = ({ dict, modules, deleteModule, crons, deleteCron }: any) 
   );
 };
 
-const RoutinesView = ({ crons, dict, deleteCron, toggleCron, updateCron, filter, setFilter, reads, markRead }: any) => {
+const RoutinesView = ({ crons, dict, deleteCron, toggleCron, updateCron, filter, setFilter, reads, markRead, onLogActivity }: any) => {
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
-      <ActiveRoutines crons={crons} dict={dict} onDelete={deleteCron} onToggle={toggleCron} updateCron={updateCron} filter={filter} setFilter={setFilter} reads={reads} markRead={markRead} />
+      <ActiveRoutines crons={crons} dict={dict} onDelete={deleteCron} onToggle={toggleCron} updateCron={updateCron} filter={filter} setFilter={setFilter} reads={reads} markRead={markRead} onLogActivity={onLogActivity} />
     </div>
   );
 };
@@ -1127,11 +1116,11 @@ const DebugView = () => {
   );
 };
 
-const AppTabs = ({ configured, tab, setTab, state, sendMessage, retryMessage, loadMore, hasMore, isLoadingMore, setConfigured, dict, crons, deleteCron, toggleCron, updateCron, modules, deleteModule, clearChat, chatInput, setChatInput, routinesFilter, setRoutinesFilter, reads, markRead }: any) => (
+const AppTabs = ({ configured, tab, setTab, state, sendMessage, retryMessage, loadMore, hasMore, isLoadingMore, setConfigured, dict, crons, deleteCron, toggleCron, updateCron, modules, deleteModule, clearChat, chatInput, setChatInput, routinesFilter, setRoutinesFilter, reads, markRead, onLogActivity }: any) => (
   <div style={{ paddingTop: '3rem', flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
     {!configured && tab !== 'settings' && <div style={{ padding: '2rem', flex: 1 }}>{dict.configureEcosystem}</div>}
     {configured && tab === 'plan' && <DashboardView messages={state.messages} dict={dict} modules={modules} deleteModule={deleteModule} crons={crons} deleteCron={deleteCron} />}
-    {configured && tab === 'routines' && <RoutinesView crons={crons} dict={dict} deleteCron={deleteCron} toggleCron={toggleCron} updateCron={updateCron} filter={routinesFilter} setFilter={setRoutinesFilter} reads={reads} markRead={markRead} />}
+    {configured && tab === 'routines' && <RoutinesView crons={crons} dict={dict} deleteCron={deleteCron} toggleCron={toggleCron} updateCron={updateCron} filter={routinesFilter} setFilter={setRoutinesFilter} reads={reads} markRead={markRead} onLogActivity={onLogActivity} />}
     {configured && tab === 'coach' && <ChatView state={state} sendMessage={sendMessage} retryMessage={retryMessage} loadMore={loadMore} hasMore={hasMore} isLoadingMore={isLoadingMore} dict={dict} chatInput={chatInput} setChatInput={setChatInput} />}
     {configured && tab === 'debug' && <DebugView />}
     {tab === 'settings' && <SettingsView setConfigured={() => { setConfigured(true); setTab('coach'); }} dict={dict} clearChat={clearChat} />}
@@ -1481,7 +1470,7 @@ const EditRoutineModal = ({ cron, onSave, onClose, dict }: any) => {
   );
 };
 
-const RoutineDetailModal = ({ cron, onClose }: any) => {
+const RoutineDetailModal = ({ cron, dict, onClose, onLogActivity }: any) => {
   if (!cron) return null;
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'var(--bg-color)', zIndex: 4000, overflowY: 'auto' }}>
@@ -1490,7 +1479,14 @@ const RoutineDetailModal = ({ cron, onClose }: any) => {
         <div style={{ padding: '1rem', background: 'var(--panel-bg)', borderRadius: '12px' }}>
           <p style={{ margin: 0, whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>{cron.description ? cron.description.replace(/\\n/g, '\n') : 'No additional details provided.'}</p>
         </div>
-        <button className="apple-button" onClick={onClose} style={{ marginTop: '2rem' }}>Close</button>
+        <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+          {onLogActivity && cron.requires_logging && (
+            <button className="apple-button" onClick={() => onLogActivity(cron.cron_id)} style={{ flex: 1, background: 'var(--accent-color)', color: '#fff', border: 'none' }}>
+              {dict?.logActivityAction || 'Log Activity'}
+            </button>
+          )}
+          <button className="apple-button" onClick={onClose} style={{ flex: 1, background: 'var(--panel-bg)', color: 'var(--text-primary)' }}>{dict?.cancel || 'Close'}</button>
+        </div>
       </div>
     </div>
   );
@@ -1591,6 +1587,7 @@ const useAppContentState = () => {
   const [detailCronId, setDetailCronId] = useState<string | null>(null);
   const [exitOnClose, setExitOnClose] = useState<boolean>(false);
   const [routinesFilter, setRoutinesFilter] = useState<string>('All');
+  const [activitiesFilter, setActivitiesFilter] = useState<string>('All');
   
   const setDetailCronIdWrapped = (id: string | null) => {
     if (id) markRead(id);
@@ -1601,14 +1598,14 @@ const useAppContentState = () => {
   const hasRoutines = cronsState.crons && cronsState.crons.length > 0;
   const debugMode = typeof window !== 'undefined' && localStorage.getItem('DEBUG_MODE') !== 'false';
   useAppTabsRedirect(hasPlans, hasRoutines, debugMode, init.tab, init.setTab);
-  return { init, chat, cronsState, modsState, menu, setMenu, detailCronId, setDetailCronId: setDetailCronIdWrapped, exitOnClose, setExitOnClose, hasPlans, hasRoutines, debugMode, routinesFilter, setRoutinesFilter, reads, markRead };
+  return { init, chat, cronsState, modsState, menu, setMenu, detailCronId, setDetailCronId: setDetailCronIdWrapped, exitOnClose, setExitOnClose, hasPlans, hasRoutines, debugMode, routinesFilter, setRoutinesFilter, activitiesFilter, setActivitiesFilter, reads, markRead };
 };
 
-const GroupedRoutinesModal = ({ dict, crons, deleteCron, toggleCron, updateCron, createCron, filter, setFilter, reads, markRead, onClose }: any) => (
+const GroupedRoutinesModal = ({ dict, crons, deleteCron, toggleCron, updateCron, createCron, filter, setFilter, reads, markRead, onClose, onLogActivity }: any) => (
   <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'var(--bg-color)', zIndex: 3000, overflowY: 'auto' }}>
     <div className="biometrics-form-container" style={{ maxWidth: '600px', margin: '0 auto', padding: '1.5rem' }}>
       <ModalHeader title={dict.routineTab || 'Routines'} onClose={onClose} />
-      <ActiveRoutines crons={crons} dict={dict} onDelete={deleteCron} onToggle={toggleCron} updateCron={updateCron} createCron={createCron} filter={filter} setFilter={setFilter} reads={reads} markRead={markRead} />
+      <ActiveRoutines crons={crons} dict={dict} onDelete={deleteCron} onToggle={toggleCron} updateCron={updateCron} createCron={createCron} filter={filter} setFilter={setFilter} reads={reads} markRead={markRead} onLogActivity={onLogActivity} />
       <button className="apple-button" onClick={onClose} style={{ background: 'var(--panel-bg)', color: 'var(--text-primary)', marginTop: '2rem' }}>{dict.cancel || 'Close'}</button>
     </div>
   </div>
@@ -1622,10 +1619,10 @@ const AppContentModals = ({ s, dict }: any) => {
   return (
     <>
       {s.menu.biometrics && <BiometricsLogView dict={dict} onClose={wrapClose(() => s.setMenu({ ...s.menu, biometrics: false }))} />}
-      {s.menu.activities && <ActivitiesView dict={dict} crons={s.cronsState.crons} onClose={wrapClose(() => s.setMenu({ ...s.menu, activities: false }))} />}
+      {s.menu.activities && <ActivitiesView dict={dict} crons={s.cronsState.crons} initialFilter={s.activitiesFilter} onClose={wrapClose(() => s.setMenu({ ...s.menu, activities: false }))} />}
       {s.menu.reports && <ReportsView dict={dict} crons={s.cronsState.crons} onClose={wrapClose(() => s.setMenu({ ...s.menu, reports: false }))} />}
-      {s.detailCronId && <RoutineDetailModal cron={s.cronsState.crons.find((c: any) => c.cron_id === s.detailCronId)} onClose={wrapClose(() => s.setDetailCronId(null))} />}
-      {s.menu.grouped_routines && <GroupedRoutinesModal dict={dict} crons={s.cronsState.crons} deleteCron={s.cronsState.deleteCron} toggleCron={s.cronsState.toggleCron} updateCron={s.cronsState.updateCron} createCron={s.cronsState.createCron} filter={s.routinesFilter} setFilter={s.setRoutinesFilter} reads={s.reads} markRead={s.markRead} onClose={wrapClose(() => s.setMenu({ ...s.menu, grouped_routines: false }))} />}
+      {s.detailCronId && <RoutineDetailModal cron={s.cronsState.crons.find((c: any) => c.cron_id === s.detailCronId)} dict={dict} onClose={wrapClose(() => s.setDetailCronId(null))} onLogActivity={() => { s.setDetailCronId(null); s.setActivitiesFilter(s.detailCronId); s.setMenu({ ...s.menu, activities: true }); }} />}
+      {s.menu.grouped_routines && <GroupedRoutinesModal dict={dict} crons={s.cronsState.crons} deleteCron={s.cronsState.deleteCron} toggleCron={s.cronsState.toggleCron} updateCron={s.cronsState.updateCron} createCron={s.cronsState.createCron} filter={s.routinesFilter} setFilter={s.setRoutinesFilter} reads={s.reads} markRead={s.markRead} onClose={wrapClose(() => s.setMenu({ ...s.menu, grouped_routines: false }))} onLogActivity={(id: string) => { s.setActivitiesFilter(id); s.setMenu({ ...s.menu, activities: true, grouped_routines: false }); }} />}
     </>
   );
 };
@@ -1633,7 +1630,7 @@ const AppContentModals = ({ s, dict }: any) => {
 const AppMainViews = ({ s, dict }: any) => (
   <>
     <LangToggle lang={s.init.lang} setLang={s.init.setLang} />
-    <AppTabs configured={s.init.configured} tab={s.init.tab} setTab={s.init.setTab} state={s.chat.state} sendMessage={s.chat.sendMessage} retryMessage={s.chat.retryMessage} loadMore={s.chat.loadMore} hasMore={s.chat.hasMore} isLoadingMore={s.chat.isLoadingMore} setConfigured={s.init.setConfigured} dict={dict} crons={s.cronsState.crons} deleteCron={s.cronsState.deleteCron} toggleCron={s.cronsState.toggleCron} updateCron={s.cronsState.updateCron} createCron={s.cronsState.createCron} modules={s.modsState.modules} deleteModule={s.modsState.deleteModule} clearChat={s.chat.clearChat} chatInput={s.chat.chatInput} setChatInput={s.chat.setChatInput} routinesFilter={s.routinesFilter} setRoutinesFilter={s.setRoutinesFilter} reads={s.reads} markRead={s.markRead} />
+    <AppTabs configured={s.init.configured} tab={s.init.tab} setTab={s.init.setTab} state={s.chat.state} sendMessage={s.chat.sendMessage} retryMessage={s.chat.retryMessage} loadMore={s.chat.loadMore} hasMore={s.chat.hasMore} isLoadingMore={s.chat.isLoadingMore} setConfigured={s.init.setConfigured} dict={dict} crons={s.cronsState.crons} deleteCron={s.cronsState.deleteCron} toggleCron={s.cronsState.toggleCron} updateCron={s.cronsState.updateCron} createCron={s.cronsState.createCron} modules={s.modsState.modules} deleteModule={s.modsState.deleteModule} clearChat={s.chat.clearChat} chatInput={s.chat.chatInput} setChatInput={s.chat.setChatInput} routinesFilter={s.routinesFilter} setRoutinesFilter={s.setRoutinesFilter} reads={s.reads} markRead={s.markRead} onLogActivity={(id: string) => { s.setActivitiesFilter(id); s.setMenu({ ...s.menu, activities: true, grouped_routines: false }); }} />
     <BottomNav tab={s.init.tab} setTab={s.init.setTab} dict={dict} hasPlans={s.hasPlans} hasRoutines={s.hasRoutines} debugMode={s.debugMode} />
   </>
 );
