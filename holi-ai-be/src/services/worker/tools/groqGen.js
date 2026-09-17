@@ -232,9 +232,9 @@ CRITICAL INSTRUCTIONS:
 1. ${getUnitInstruction(unitSystem)}
 2. Extract ALL gathered user facts and summarize them clearly as a markdown bullet list in the 'user_profile_summary' field.
 3. The 'description' field MUST provide a concise, 1-2 sentence high-level summary of the overall strategy. Do NOT outline all the phases here.
-4. The 'plan_title' MUST be short, punchy, and concise (max 3-5 words). Example: "Rapid Weight-Loss Protocol" or "Hypertrophy Program".
+4. The 'plan_title' MUST be short, punchy, and concise (max 3-5 words).
 5. The 'category_names' MUST be an array of distinct, actionable phases, modules, or pillars of the curriculum. You MUST break the plan down into multiple distinct categories. Do NOT return a single monolithic category representing the whole plan.
-6. NEVER use HTML tags (like <br>, <b>, <i>, etc.) for formatting. Use strictly standard Markdown.`;
+6. NEVER use HTML tags for formatting. Use strictly standard Markdown.`;
 
 const validatePlanOutline = (args) => {
   if (!args || !args.plan_title || !args.description || !args.category_names || !args.user_profile_summary) {
@@ -254,7 +254,7 @@ Plan Context: ${truncateContext(toolArgs.user_goals_and_context, 1500)}
 CRITICAL INSTRUCTIONS:
 1. ${getUnitInstruction(unitSystem)}
 2. Provide a step-by-step, actionable curriculum for this category. Give precise instructions, sets, reps, timings, dietary macros, or daily schedules as applicable. Avoid generic advice; tell the user EXACTLY what to do.
-3. Use highly structured Markdown formatting. Use Headers (###), bullet points, and bold text to organize the content clearly. NEVER use HTML tags (like <br>, <b>, <i>).
+3. Use highly structured Markdown formatting. Use Headers (###), bullet points, and bold text to organize the content clearly. NEVER use HTML tags.
 4. DO NOT repeat the user's base profile facts inside this category unless specifically explaining an accommodation. Focus entirely on the actionable curriculum and routines.
 5. Ensure the content directly addresses the user's specific context, preferences, and limitations.`;
 
@@ -477,7 +477,7 @@ Step: ${step}
 
 CRITICAL INSTRUCTIONS:
 1. ${getUnitInstruction(unitSystem)}
-2. Format the description using a proper bulleted or numbered list. NEVER use dashes (-) or hyphens for bullets. If not using a list, distinct logical entries MUST start on a new line. NEVER use HTML tags (like <br>, <b>, <i>).
+2. Format the description using a proper bulleted or numbered list. NEVER use dashes (-) or hyphens for bullets. If not using a list, distinct logical entries MUST start on a new line. NEVER use HTML tags.
 3. Schedule at least 5 minutes apart from any existing routine.
 4. Set requires_logging to true ONLY for measurable/trackable actions (intake, exercise, metrics). Set false for instructional routines.`;
   return prompt + getExistingRoutinesStr(existingRoutines);
