@@ -1392,12 +1392,13 @@ const useActivitiesState = (crons: any) => {
   const [hiddenCrons, setHiddenCrons] = useState<Record<string, boolean>>({});
   const [filter, setFilter] = useState<string>('All');
 
+  const [selectedCron, setSelectedCron] = useState<any>(null);
   const loggableCrons = getLoggableCrons(crons, logs, hiddenCrons);
   const categories = loggableCrons.length > 0 ? ['All', ...Array.from(new Set(loggableCrons.map((c: any) => c.category || 'Custom')))] : [];
   const filteredCrons = filter === 'All' ? loggableCrons : loggableCrons.filter((c: any) => (c.category || 'Custom') === filter);
   const { handleLog, handleDismiss } = useActivityHandlers(data, setData, hiddenCrons, setHiddenCrons, isSubmitting, submitLog);
 
-  return { data, setData, isSubmitting, handleLog, handleDismiss, loggableCrons, filter, setFilter, categories, filteredCrons };
+  return { data, setData, isSubmitting, handleLog, handleDismiss, loggableCrons, filter, setFilter, categories, filteredCrons, selectedCron, setSelectedCron };
 };
 
 const ActivityItemActions = ({ c, data, setData, isBoolean, isSubmitting, canLog, handleLog, handleDismiss }: any) => (
@@ -1415,29 +1416,28 @@ const ActivityItemActions = ({ c, data, setData, isBoolean, isSubmitting, canLog
   </div>
 );
 
-const ActivityItem = ({ c, data, setData, isSubmitting, handleLog, handleDismiss }: any) => {
+const ActivityItem = ({ c, data, setData, isSubmitting, handleLog, handleDismiss, setSelectedCron }: any) => {
   const hasValue = !!data[c.cron_id];
   const isBoolean = c.log_type === 'boolean';
   const canLog = isBoolean || hasValue;
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--panel-bg)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-      <div style={{ flex: 1, marginRight: '1rem' }}>
-        <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.2rem', fontSize: '0.95rem' }}>{c.title}</div>
-        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.3' }}>{c.description}</div>
+      <div style={{ flex: 1, marginRight: '1rem', cursor: 'pointer' }} onClick={() => setSelectedCron(c)}>
+        <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.2rem', fontSize: '0.95rem', textDecoration: 'underline', textUnderlineOffset: '2px' }}>{c.title}</div>
       </div>
       <ActivityItemActions c={c} data={data} setData={setData} isBoolean={isBoolean} isSubmitting={isSubmitting} canLog={canLog} handleLog={handleLog} handleDismiss={handleDismiss} />
     </div>
   );
 };
 
-const ActivitiesList = ({ filteredCrons, data, setData, isSubmitting, handleLog, handleDismiss }: any) => (
+const ActivitiesList = ({ filteredCrons, data, setData, isSubmitting, handleLog, handleDismiss, setSelectedCron }: any) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
-    {filteredCrons.map((c: any) => <ActivityItem key={c.cron_id} c={c} data={data} setData={setData} isSubmitting={isSubmitting} handleLog={handleLog} handleDismiss={handleDismiss} />)}
+    {filteredCrons.map((c: any) => <ActivityItem key={c.cron_id} c={c} data={data} setData={setData} isSubmitting={isSubmitting} handleLog={handleLog} handleDismiss={handleDismiss} setSelectedCron={setSelectedCron} />)}
   </div>
 );
 
 const ActivitiesView = ({ dict, crons, onClose }: any) => {
-  const { data, setData, isSubmitting, handleLog, handleDismiss, loggableCrons, filter, setFilter, categories, filteredCrons } = useActivitiesState(crons);
+  const { data, setData, isSubmitting, handleLog, handleDismiss, loggableCrons, filter, setFilter, categories, filteredCrons, selectedCron, setSelectedCron } = useActivitiesState(crons);
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'var(--bg-color)', zIndex: 3000, overflowY: 'auto' }}>
       <div className="biometrics-form-container" style={{ maxWidth: '600px', margin: '0 auto', padding: '1.5rem' }}>
@@ -1445,11 +1445,12 @@ const ActivitiesView = ({ dict, crons, onClose }: any) => {
         {loggableCrons.length === 0 ? <p style={{ color: 'var(--text-secondary)' }}>No routines require logging.</p> : (
           <>
             <CategoryTabs categories={categories} filter={filter} setFilter={setFilter} />
-            <ActivitiesList filteredCrons={filteredCrons} data={data} setData={setData} isSubmitting={isSubmitting} handleLog={handleLog} handleDismiss={handleDismiss} />
+            <ActivitiesList filteredCrons={filteredCrons} data={data} setData={setData} isSubmitting={isSubmitting} handleLog={handleLog} handleDismiss={handleDismiss} setSelectedCron={setSelectedCron} />
           </>
         )}
         <button className="apple-button" onClick={onClose} style={{ background: 'var(--panel-bg)', color: 'var(--text-primary)', marginTop: '2rem' }}>{dict.cancel || 'Close'}</button>
       </div>
+      {selectedCron && <RoutineDetailModal cron={selectedCron} onClose={() => setSelectedCron(null)} />}
     </div>
   );
 };
@@ -1483,7 +1484,7 @@ const EditRoutineModal = ({ cron, onSave, onClose, dict }: any) => {
 const RoutineDetailModal = ({ cron, onClose }: any) => {
   if (!cron) return null;
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'var(--bg-color)', zIndex: 3000, overflowY: 'auto' }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'var(--bg-color)', zIndex: 4000, overflowY: 'auto' }}>
       <div className="biometrics-form-container" style={{ maxWidth: '600px', margin: '0 auto', padding: '1.5rem' }}>
         <ModalHeader title={cron.title} onClose={onClose} />
         <div style={{ padding: '1rem', background: 'var(--panel-bg)', borderRadius: '12px' }}>
