@@ -351,7 +351,7 @@ const getSingleCronParams = () => ({
   type: 'object',
   properties: {
     title: { type: 'string' },
-    schedule: { type: 'string', description: 'Label, e.g. "06:45 daily".' },
+    schedule: { type: 'string', description: 'Time and frequency label. Capitalize words and ensure spaces after commas.' },
     cron_expression: { type: 'string' },
     frequency: { type: 'string', enum: ['Daily', 'Weekly', 'Monthly', 'Custom'] },
     category: { type: 'string', enum: ['Fitness', 'Nutrition', 'Mindfulness', 'Health', 'Sleep', 'Custom'] },
@@ -446,7 +446,12 @@ const applyNewRoutineTime = (routine, mins) => {
   const p = routine.cron_expression.split(' ');
   p[0] = m.toString(); p[1] = h.toString();
   routine.cron_expression = p.join(' ');
-  routine.schedule = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${routine.frequency}`;
+  const newTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  if (routine.schedule && /^\\d{1,2}:\\d{2}\\b/.test(routine.schedule)) {
+    routine.schedule = routine.schedule.replace(/^\\d{1,2}:\\d{2}/, newTime);
+  } else {
+    routine.schedule = `${newTime} ${routine.frequency}`;
+  }
   return routine;
 };
 
