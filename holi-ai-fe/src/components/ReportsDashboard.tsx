@@ -9,6 +9,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   'Nutrition': '#f59e0b',
   'Mindfulness': '#8b5cf6',
   'Health': '#10b981',
+  'Sleep': '#6366f1',
   'Custom': 'var(--accent-color)'
 };
 

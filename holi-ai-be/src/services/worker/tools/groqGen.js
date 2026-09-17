@@ -353,7 +353,7 @@ const getSingleCronParams = () => ({
     title: { type: 'string' },
     schedule: { type: 'string', description: 'Label, e.g. "06:45 daily".' },
     cron_expression: { type: 'string' },
-    category: { type: 'string', enum: ['Daily', 'Weekly', 'Monthly', 'Custom'] },
+    category: { type: 'string', enum: ['Fitness', 'Nutrition', 'Mindfulness', 'Health', 'Sleep', 'Custom'] },
     description: { type: 'string' },
     requires_logging: { type: 'boolean' },
     log_type: { type: 'string', enum: ['number', 'boolean', 'text'] },
