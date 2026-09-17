@@ -130,7 +130,7 @@ const InfoModal = ({ title, text, close, dict }: any) => (
   <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
     <div className="card" style={{ width: '100%', maxWidth: '400px', position: 'relative', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
       <h3 style={{ marginBottom: '1rem', color: 'var(--accent-color)' }}>{title}</h3>
-      <p style={{ fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--text-secondary)', whiteSpace: 'pre-line', userSelect: 'text' }}>{text}</p>
+      <p style={{ fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--text-secondary)', whiteSpace: 'pre-line', userSelect: 'text' }}>{(text || '').replace(/\\n/g, '\n')}</p>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
         <button onClick={(e) => { e.preventDefault(); close(); }} type="button" className="apple-button" style={{ width: 'auto', padding: '0.5rem 1.5rem' }}>{dict.gotIt}</button>
       </div>
@@ -1487,7 +1487,7 @@ const RoutineDetailModal = ({ cron, onClose }: any) => {
       <div className="biometrics-form-container" style={{ maxWidth: '600px', margin: '0 auto', padding: '1.5rem' }}>
         <ModalHeader title={cron.title} onClose={onClose} />
         <div style={{ padding: '1rem', background: 'var(--panel-bg)', borderRadius: '12px' }}>
-          <p style={{ margin: 0, whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>{cron.description || 'No additional details provided.'}</p>
+          <p style={{ margin: 0, whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>{cron.description ? cron.description.replace(/\\n/g, '\n') : 'No additional details provided.'}</p>
         </div>
         <button className="apple-button" onClick={onClose} style={{ marginTop: '2rem' }}>Close</button>
       </div>
