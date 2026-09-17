@@ -418,6 +418,51 @@ const deduplicateSteps = (steps) => {
   });
 };
 
+const parseCronMinutes = (cronExpr) => {
+  const parts = cronExpr.split(' ');
+  if (parts.length < 5) return null;
+  const m = parseInt(parts[0], 10);
+  const h = parseInt(parts[1], 10);
+  return isNaN(m) || isNaN(h) ? null : h * 60 + m;
+};
+
+const getNonCollidingMins = (startMins, existingRoutines) => {
+  let mins = startMins, collision = true;
+  while (collision) {
+    collision = false;
+    for (const er of existingRoutines) {
+      const em = parseCronMinutes(er.cron_expression);
+      if (em !== null && Math.abs(em - mins) < 5) {
+        mins += 5; collision = true; break;
+      }
+    }
+  }
+  return mins;
+};
+
+const applyNewRoutineTime = (routine, mins) => {
+  const h = Math.floor(mins / 60) % 24, m = mins % 60;
+  const p = routine.cron_expression.split(' ');
+  p[0] = m.toString(); p[1] = h.toString();
+  routine.cron_expression = p.join(' ');
+  routine.schedule = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${routine.category}`;
+  return routine;
+};
+
+const offsetCollidingCron = (routine, existingRoutines) => {
+  if (!routine.cron_expression) return routine;
+  const mins = parseCronMinutes(routine.cron_expression);
+  if (mins === null) return routine;
+  const finalMins = getNonCollidingMins(mins, existingRoutines);
+  return finalMins !== mins ? applyNewRoutineTime(routine, finalMins) : routine;
+};
+
+const getExistingRoutinesStr = (existingRoutines) => {
+  if (!existingRoutines || !existingRoutines.length) return '';
+  const existingStr = existingRoutines.map(r => `- ${r.schedule}: ${r.title}`).join('\n');
+  return `\n\nExisting routines (do not schedule at these exact times):\n${existingStr}`;
+};
+
 const buildSingleRoutinePrompt = (planTitle, step, unitSystem, existingRoutines) => {
   let prompt = `Create EXACTLY ONE routine for the following step.
 Plan: ${planTitle}
@@ -425,12 +470,10 @@ Step: ${step}
 
 CRITICAL INSTRUCTIONS:
 1. ${getUnitInstruction(unitSystem)}
-2. Format the description using a bulleted or numbered list.`;
-  if (existingRoutines && existingRoutines.length > 0) {
-    const existingStr = existingRoutines.map(r => `- ${r.schedule}: ${r.title}`).join('\n');
-    prompt += `\n\nExisting routines (do not schedule at these exact times):\n${existingStr}`;
-  }
-  return prompt;
+2. Format the description using a bulleted or numbered list.
+3. Schedule at least 5 minutes apart from any existing routine.
+4. Set requires_logging to true ONLY for measurable/trackable actions (intake, exercise, metrics). Set false for instructional routines.`;
+  return prompt + getExistingRoutinesStr(existingRoutines);
 };
 
 const generateRoutineForStep = async (apiKeys, userId, client, model, planTitle, step, jobId, unitSystem, existing) => {
@@ -449,8 +492,9 @@ const updateStepProgress = async (apiKeys, jobId, stepIndex, totalSteps) => {
 };
 
 const processRoutineStep = async (apiKeys, userId, client, model, planTitle, step, jobId, context) => {
-  const routine = await generateRoutineForStep(apiKeys, userId, client, model, planTitle, step, jobId, context.unitSystem, context.routinesState.generatedRoutines);
+  let routine = await generateRoutineForStep(apiKeys, userId, client, model, planTitle, step, jobId, context.unitSystem, context.routinesState.generatedRoutines);
   if (!routine) return null;
+  routine = offsetCollidingCron(routine, context.routinesState.generatedRoutines);
   const linkedModule = planTitle?.module_title || planTitle;
   await handleUpsertUserCron(apiKeys, userId, { ...routine, linked_module: linkedModule });
   return routine;

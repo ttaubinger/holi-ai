@@ -720,20 +720,30 @@ const sortCrons = (crons: Cron[], sortOrder: 'asc' | 'desc') => {
   });
 };
 
+const filterDueCrons = (crons: Cron[], reads: string[]) => {
+  const now = new Date();
+  const currentMins = now.getHours() * 60 + now.getMinutes();
+  return crons.filter((c: Cron) => {
+    if (reads.includes(c.cron_id)) return false;
+    const t = getCronTimeMinutes(c.cron_expression);
+    return t !== Infinity && t <= currentMins;
+  });
+};
+
+const filterTimeGroupCrons = (crons: Cron[], filter: string) => {
+  return crons.filter((c: Cron) => {
+    if (!c.cron_expression) return false;
+    const p = c.cron_expression.split(' ');
+    return `holi-${p[1]}-${p[0]}` === filter;
+  });
+};
+
 const getFilteredCrons = (crons: Cron[], filter: string, reads: string[]) => {
-  let baseFiltered = crons || [];
-  if (filter === 'Due') {
-    const now = new Date();
-    const currentMins = now.getHours() * 60 + now.getMinutes();
-    baseFiltered = baseFiltered.filter((c: Cron) => {
-      if (reads.includes(c.cron_id)) return false;
-      const t = getCronTimeMinutes(c.cron_expression);
-      return t !== Infinity && t <= currentMins;
-    });
-  } else if (filter !== 'All') {
-    baseFiltered = baseFiltered.filter((c: Cron) => (c.category || 'Custom') === filter);
-  }
-  return baseFiltered;
+  const base = crons || [];
+  if (filter === 'Due') return filterDueCrons(base, reads);
+  if (filter.startsWith('holi-')) return filterTimeGroupCrons(base, filter);
+  if (filter !== 'All') return base.filter((c: Cron) => (c.category || 'Custom') === filter);
+  return base;
 };
 
 const useActiveRoutinesState = (crons: any, injectedFilter: string, setInjectedFilter: any, reads: string[], markRead: any) => {
@@ -1634,7 +1644,7 @@ const useAppNotifications = (s: any) => {
     else if (route === 'routine_detail' && extra?.cron_id) { s.setMenu((prev: any) => ({ ...prev, open: false })); s.setDetailCronId(extra.cron_id); }
     else if (route === 'routines') { 
       s.setMenu((prev: any) => ({ ...prev, open: false, grouped_routines: true })); 
-      s.setRoutinesFilter('Due');
+      s.setRoutinesFilter(extra?.time_group || 'Due');
     }
   });
 };

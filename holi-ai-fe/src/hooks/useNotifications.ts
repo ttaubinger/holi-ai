@@ -38,13 +38,15 @@ const buildNativeNotification = (c: Cron): LocalNotificationSchema | null => {
   if (!c.is_active || !c.cron_expression) return null;
   const scheduleOn = parseCronToSchedule(c.cron_expression);
   if (!scheduleOn) return null;
+  const p = c.cron_expression.split(' ');
+  const timeGroup = `holi-${p[1]}-${p[0]}`;
   return {
     id: generateId(c),
     title: c.title,
     body: c.description || 'Holistic Coach Routine',
     schedule: { on: scheduleOn },
-    group: c.cron_id,
-    extra: { route: 'routine_detail', cron_id: c.cron_id } 
+    group: timeGroup,
+    extra: { route: 'routines', cron_id: c.cron_id, time_group: timeGroup } 
   };
 };
 
