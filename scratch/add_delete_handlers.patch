@@ -1,0 +1,36 @@
+--- holi-ai-be/src/services/worker/tools/dbUpsert.js
++++ holi-ai-be/src/services/worker/tools/dbUpsert.js
+@@ -7,6 +7,11 @@
+   return { success: true };
+ };
+ 
++const handleDeleteActionPlan = async (apiKeys, userId, toolArgs) => {
++  await database.deleteActionModule(apiKeys, userId, toolArgs.plan_title);
++  return { success: true, message: `Plan "${toolArgs.plan_title}" deleted.` };
++};
++
+ const slugify = (s) => s ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') : '';
+ 
+ const buildCronId = (cron) => cron.cron_id || `c_${slugify(cron.title)}`;
+@@ -19,6 +24,11 @@
+   return { success: true };
+ };
+ 
++const handleDeleteUserCron = async (apiKeys, userId, toolArgs) => {
++  await database.deleteUserCron(apiKeys, userId, toolArgs.cron_id);
++  return { success: true, message: `Routine with ID "${toolArgs.cron_id}" deleted.` };
++};
++
+ const handleEvolveCoachPrompt = async (apiKeys, userId, toolArgs) => {
+   await database.upsertCoachPrompt(apiKeys, userId, toolArgs.evolved_prompt);
+   return { success: true };
+@@ -39,7 +49,9 @@
+ 
+ module.exports = {
+   handleUpsertActionPlan,
++  handleDeleteActionPlan,
+   handleUpsertUserCron,
++  handleDeleteUserCron,
+   handleEvolveCoachPrompt,
+   handleUpsertUserFacts
+ };

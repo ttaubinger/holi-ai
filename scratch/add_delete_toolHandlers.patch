@@ -1,0 +1,20 @@
+--- holi-ai-be/src/services/worker/toolHandlers.js
++++ holi-ai-be/src/services/worker/toolHandlers.js
+@@ -1,6 +1,6 @@
+ const { handleFetchActionPlans, handleFetchActionPlanCategories, handleFetchActionPlanCategory, handleFetchUserCrons } = require('./tools/dbFetch');
+ const { handleEnqueueQuestions, handleEvaluateCurrentQuestion } = require('./tools/questions');
+-const { handleUpsertActionPlan, handleUpsertUserCron, handleEvolveCoachPrompt, handleUpsertUserFacts } = require('./tools/dbUpsert');
++const { handleUpsertActionPlan, handleDeleteActionPlan, handleUpsertUserCron, handleDeleteUserCron, handleEvolveCoachPrompt, handleUpsertUserFacts } = require('./tools/dbUpsert');
+ const { handleSendResponse } = require('./tools/chat');
+ const { handleGenerateUserPlan, handleGenerateUserRoutines } = require('./tools/groqGen');
+ 
+@@ -17,7 +17,9 @@
+   if (functionName === 'fetch_action_plan_category') return await handleFetchActionPlanCategory(apiKeys, userId, toolArgs);
+   if (functionName === 'fetch_user_crons') return await handleFetchUserCrons(apiKeys, userId);
+   if (functionName === 'upsert_action_plan') return await handleUpsertActionPlan(apiKeys, userId, toolArgs);
++  if (functionName === 'delete_action_plan') return await handleDeleteActionPlan(apiKeys, userId, toolArgs);
+   if (functionName === 'upsert_user_cron') return await handleUpsertUserCron(apiKeys, userId, toolArgs);
++  if (functionName === 'delete_user_cron') return await handleDeleteUserCron(apiKeys, userId, toolArgs);
+   if (functionName === 'evolve_coach_prompt') return await handleEvolveCoachPrompt(apiKeys, userId, toolArgs);
+   if (functionName === 'upsert_user_facts') return await handleUpsertUserFacts(apiKeys, userId, toolArgs);
+   if (functionName === 'generate_user_plan') return await handleGenerateUserPlan(apiKeys, userId, toolArgs, jobId, context);

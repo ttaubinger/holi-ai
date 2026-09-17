@@ -1,0 +1,14 @@
+--- holi-ai-be/src/agent/orchestrator.yaml
++++ holi-ai-be/src/agent/orchestrator.yaml
+@@ -231,9 +231,9 @@
+             - send_response
+           dynamic_allow:
+             - if: "tools_called.includes('fetch_action_plan_categories')"
+-              add: ['fetch_action_plan_category', 'upsert_action_plan']
++              add: ['fetch_action_plan_category', 'upsert_action_plan', 'delete_action_plan']
+             - if: "tools_called.includes('fetch_user_crons')"
+-              add: ['upsert_user_cron']
++              add: ['upsert_user_cron', 'delete_user_cron']
+ 
+       - id: process_queue
+         condition: "context.questionQueue.length > 0"

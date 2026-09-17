@@ -8,11 +8,6 @@ const handleUpsertActionPlan = async (apiKeys, userId, toolArgs) => {
   return { success: true };
 };
 
-const handleDeleteActionPlan = async (apiKeys, userId, toolArgs) => {
-  await database.deleteActionModule(apiKeys, userId, toolArgs.plan_title);
-  return { success: true, message: `Plan "${toolArgs.plan_title}" deleted.` };
-};
-
 const slugify = (s) => s ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') : '';
 
 const buildCronId = (cron) => cron.cron_id || `c_${slugify(cron.title)}`;
@@ -23,11 +18,6 @@ const handleUpsertUserCron = async (apiKeys, userId, toolArgs) => {
     : [{ ...toolArgs, cron_id: buildCronId(toolArgs), is_active: true }];
   await database.upsertCrons(apiKeys, userId, cronsToInsert);
   return { success: true };
-};
-
-const handleDeleteUserCron = async (apiKeys, userId, toolArgs) => {
-  await database.deleteUserCron(apiKeys, userId, toolArgs.cron_id);
-  return { success: true, message: `Routine with ID "${toolArgs.cron_id}" deleted.` };
 };
 
 const handleEvolveCoachPrompt = async (apiKeys, userId, toolArgs) => {
@@ -50,9 +40,7 @@ const handleUpsertUserFacts = async (apiKeys, userId, toolArgs) => {
 
 module.exports = {
   handleUpsertActionPlan,
-  handleDeleteActionPlan,
   handleUpsertUserCron,
-  handleDeleteUserCron,
   handleEvolveCoachPrompt,
   handleUpsertUserFacts
 };

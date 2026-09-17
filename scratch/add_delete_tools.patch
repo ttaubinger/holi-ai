@@ -1,0 +1,23 @@
+--- holi-ai-be/src/agent/orchestrator/tools.js
++++ holi-ai-be/src/agent/orchestrator/tools.js
+@@ -19,6 +19,10 @@
+ 
+ const createUpsertActionPlanTool = () => buildToolDef('upsert_action_plan', 'CRITICAL: Use this to generate a comprehensive, massive new plan from scratch, OR to surgically update/merge changes into an existing plan. When generating a new plan, ensure descriptions are highly specific and actionable tasks detailing exactly what to do. Avoid vague descriptions. Reuse the exact same plan_title to update an existing plan. Call fetch_action_plan_category for specific categories you need to update so you can merge safely.', buildActionPlanParams());
+ 
++const createDeleteActionPlanTool = () => buildToolDef('delete_action_plan', 'Delete an entire action plan by its title. This will permanently remove the plan.', { type: 'object', properties: { plan_title: { type: 'string', description: 'The title of the plan to delete.' } }, required: ['plan_title'] });
++
++const createDeleteUserCronTool = () => buildToolDef('delete_user_cron', 'Delete a specific user routine/cron by its cron_id. ALWAYS fetch crons first to get the correct cron_id.', { type: 'object', properties: { cron_id: { type: 'string', description: 'The exact cron_id of the routine to delete.' } }, required: ['cron_id'] });
++
+ const createFetchUserCronsTool = () => buildToolDef('fetch_user_crons', 'Fetch the user\'s currently scheduled routines, daily habits, and tracking tasks. ALWAYS call this before creating or updating crons.', { type: 'object', properties: {} });
+ 
+ const createEnqueueQuestionsTool = () => buildToolDef('enqueue_questions', 'Add new questions to the end of the question queue. Use this whenever you realize you need more information from the user.', { type: 'object', properties: { questions: { type: 'array', items: { type: 'object', properties: { question_id: { type: 'string' }, question: { type: 'string' } }, required: ['question'] } } }, required: ['questions'] });
+@@ -51,7 +55,9 @@
+   'fetch_action_plan_categories': () => createFetchActionPlanCategoriesTool(),
+   'fetch_action_plan_category': () => createFetchActionPlanCategoryTool(),
+   'upsert_action_plan': () => createUpsertActionPlanTool(),
++  'delete_action_plan': () => createDeleteActionPlanTool(),
+   'fetch_user_crons': () => createFetchUserCronsTool(),
+   'upsert_user_cron': () => createUpsertUserCronTool(),
++  'delete_user_cron': () => createDeleteUserCronTool(),
+   'enqueue_questions': () => createEnqueueQuestionsTool(),
+   'evaluate_current_question': () => createEvaluateCurrentQuestionTool(),

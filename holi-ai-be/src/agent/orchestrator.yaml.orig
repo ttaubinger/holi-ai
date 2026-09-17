@@ -138,9 +138,9 @@ routes:
             - send_response
           dynamic_allow:
             - if: "tools_called.includes('fetch_action_plan_categories')"
-              add: ['fetch_action_plan_category', 'upsert_action_plan', 'delete_action_plan']
+              add: ['fetch_action_plan_category', 'upsert_action_plan']
             - if: "tools_called.includes('fetch_user_crons')"
-              add: ['upsert_user_cron', 'delete_user_cron']
+              add: ['upsert_user_cron']
         hooks:
           pre_execution:
             - if: "context.questionQueue.length > 0 && !tools_injected.includes('evaluate_current_question')"
@@ -216,6 +216,6 @@ routes:
             - send_response
           dynamic_allow:
             - if: "tools_called.includes('fetch_action_plan_categories')"
-              add: ['fetch_action_plan_category', 'upsert_action_plan', 'delete_action_plan']
+              add: ['fetch_action_plan_category', 'upsert_action_plan']
             - if: "tools_called.includes('fetch_user_crons')"
-              add: ['upsert_user_cron', 'delete_user_cron']
+              add: ['upsert_user_cron']

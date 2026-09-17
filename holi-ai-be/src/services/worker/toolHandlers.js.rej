@@ -1,0 +1,8 @@
+@@ -1,6 +1,6 @@
+ const { handleFetchActionPlans, handleFetchActionPlanCategories, handleFetchActionPlanCategory, handleFetchUserCrons } = require('./tools/dbFetch');
+ const { handleEnqueueQuestions, handleEvaluateCurrentQuestion } = require('./tools/questions');
+-const { handleUpsertActionPlan, handleUpsertUserCron, handleEvolveCoachPrompt, handleUpsertUserFacts } = require('./tools/dbUpsert');
++const { handleUpsertActionPlan, handleDeleteActionPlan, handleUpsertUserCron, handleDeleteUserCron, handleEvolveCoachPrompt, handleUpsertUserFacts } = require('./tools/dbUpsert');
+ const { handleSendResponse } = require('./tools/chat');
+ const { handleGenerateUserPlan, handleGenerateUserRoutines } = require('./tools/groqGen');
+ 

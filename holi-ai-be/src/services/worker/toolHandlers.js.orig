@@ -1,6 +1,6 @@
 const { handleFetchBiometricsLogs, handleFetchActionPlans, handleFetchActionPlanCategories, handleFetchActionPlanCategory, handleFetchUserCrons } = require('./tools/dbFetch');
 const { handleEnqueueQuestions, handleDequeueQuestion, handleEvaluateCurrentQuestion } = require('./tools/queue');
-const { handleUpsertActionPlan, handleDeleteActionPlan, handleUpsertUserCron, handleDeleteUserCron, handleEvolveCoachPrompt, handleUpsertUserFacts } = require('./tools/dbUpsert');
+const { handleUpsertActionPlan, handleUpsertUserCron, handleEvolveCoachPrompt, handleUpsertUserFacts } = require('./tools/dbUpsert');
 const { handleGenerateUserPlan, handleGenerateUserRoutines } = require('./tools/groqGen');
 
 const dispatchToolCall1 = async (apiKeys, userId, functionName, toolArgs, history) => {
@@ -19,9 +19,7 @@ const dispatchToolCall1 = async (apiKeys, userId, functionName, toolArgs, histor
 
 const dispatchToolCall2 = async (apiKeys, userId, functionName, toolArgs, jobId, context) => {
   if (functionName === 'upsert_action_plan') return await handleUpsertActionPlan(apiKeys, userId, toolArgs);
-  if (functionName === 'delete_action_plan') return await handleDeleteActionPlan(apiKeys, userId, toolArgs);
   if (functionName === 'upsert_user_cron') return await handleUpsertUserCron(apiKeys, userId, toolArgs);
-  if (functionName === 'delete_user_cron') return await handleDeleteUserCron(apiKeys, userId, toolArgs);
   if (functionName === 'evolve_coach_prompt') return await handleEvolveCoachPrompt(apiKeys, userId, toolArgs);
   if (functionName === 'upsert_user_facts') return await handleUpsertUserFacts(apiKeys, userId, toolArgs);
   if (functionName === 'generate_user_plan') return await handleGenerateUserPlan(apiKeys, userId, toolArgs, jobId, context);
