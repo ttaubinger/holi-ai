@@ -69,7 +69,7 @@ const getCategoryRoutineDistributionData = (logs: ActivityLog[]) => {
     const title = l.activity_title || 'Unknown';
     counts[title] = (counts[title] || 0) + 1;
     if (!fills[title]) {
-      fills[title] = getRoutineColor(l.cron_id || "");
+      fills[title] = getRoutineColor(l.cron_id);
     }
   });
   return Object.keys(counts).map(title => ({ title, count: counts[title] || 0, fill: fills[title] })).sort((a, b) => b.count - a.count).slice(0, 5);
@@ -193,8 +193,17 @@ const SpecificCategoryCharts = ({ logs, dict }: any) => {
 
 export const ReportsDashboard = ({ logs, crons, dict, selectedCategory, setSelectedCategory, days, setDays }: any) => {
   const filteredLogs = useMemo(() => filterLogsByDays(logs, days), [logs, days]);
-  const allCategories = useMemo(() => Array.from(new Set(crons.map((c: Cron) => c.category || 'Custom'))), [crons]);
-  const specificLogs = useMemo(() => selectedCategory ? filteredLogs.filter(l => (crons.find((c: Cron) => c.cron_id === l.cron_id)?.category || 'Custom') === selectedCategory) : [], [filteredLogs, crons, selectedCategory]);
+  
+  const allCategories = useMemo(() => {
+    const cats = new Set(crons.map((c: Cron) => c.category || 'Custom'));
+    return Array.from(cats);
+  }, [crons]);
+
+  const specificLogs = useMemo(() => selectedCategory ? filteredLogs.filter(l => {
+    const cron = crons.find((c: Cron) => c.cron_id === l.cron_id);
+    return (cron?.category || 'Custom') === selectedCategory;
+  }) : [], [filteredLogs, crons, selectedCategory]);
+
   return (
     <div>
       <TimeframeSelector days={days} setDays={setDays} />

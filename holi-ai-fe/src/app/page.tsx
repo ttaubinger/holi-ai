@@ -1618,21 +1618,25 @@ const ReportsList = ({ logs }: any) => (
 
 const ReportsView = ({ dict, crons, onClose }: any) => {
   const { logs } = useActivities('usr_1');
-  const [selectedCronId, setSelectedCronId] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [days, setDays] = useState<number | null>(7);
   
-  const filteredByCron = selectedCronId ? (logs || []).filter((l: any) => l.cron_id === selectedCronId) : (logs || []);
-  const displayLogs = days ? filteredByCron.filter((l: any) => {
+  const filteredByCat = selectedCategory ? (logs || []).filter((l: any) => {
+    const cron = crons.find((c: any) => c.cron_id === l.cron_id);
+    return (cron?.category || 'Custom') === selectedCategory;
+  }) : (logs || []);
+
+  const displayLogs = days ? filteredByCat.filter((l: any) => {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
     return l.logged_at && new Date(l.logged_at) >= cutoff;
-  }) : filteredByCron;
+  }) : filteredByCat;
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'var(--bg-color)', zIndex: 3000, overflowY: 'auto' }}>
       <div className="biometrics-form-container" style={{ maxWidth: '600px', margin: '0 auto', padding: '1.5rem' }}>
         <ModalHeader title={dict.activityReports} onClose={onClose} />
-        <ReportsDashboard logs={logs} crons={crons} dict={dict} selectedCronId={selectedCronId} setSelectedCronId={setSelectedCronId} days={days} setDays={setDays} />
+        <ReportsDashboard logs={logs} crons={crons} dict={dict} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} days={days} setDays={setDays} />
         <h3 style={{ marginTop: '2rem' }}>Detailed Logs</h3>
         {(!displayLogs || displayLogs.length === 0) ? <p style={{ color: 'var(--text-secondary)' }}>{dict.noLogs}</p> : <ReportsList logs={displayLogs} />}
         <button className="apple-button" onClick={onClose} style={{ background: 'var(--panel-bg)', color: 'var(--text-primary)', marginTop: '2rem' }}>{dict.cancel}</button>
